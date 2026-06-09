@@ -149,11 +149,18 @@ window.handleGenerate = async function (overrideTone = null) {
     // Go to step 3
     goToStep(3);
 
-    // Load into TTS engine (does NOT auto-play)
+    // Load into TTS engine (does NOT auto-play) — uses BODY text only (no title duplication)
     const narrativeText = json.narrative || json.body || '';
+    // Strip title from TTS text too, so it isn't read twice
+    const ttsText = narrativeText
+      .replace(/^#+\s*.+\n?/m, '')  // remove first # heading if present
+      .trim();
     if (window.TTS) {
-      window.TTS.load(narrativeText);
-      showToast('✨ Narrative ready! Press ▶ to listen.', 'success', 4000);
+      window.TTS.load(ttsText);
+      const words = ttsText.trim().split(/\s+/).length;
+      const chars = ttsText.length;
+      console.log(`[TTS] Loaded narrative — ${words} words, ${chars} chars`);
+      showToast(`✨ Narrative ready (${words} words)! Press ▶ to listen.`, 'success', 4000);
     }
 
     // Firestore backup (non-blocking)
@@ -180,32 +187,63 @@ function renderNarrative(json) {
   const output = document.getElementById('narrativeOutput');
   if (!output) return;
 
-  const text = json.narrative || json.body || json.content || '';
+  const title = json.title || json.route || 'Trip Narrative';
+  let   text  = json.narrative || json.body || json.content || '';
+
   if (!text) {
     output.innerHTML = '<p class="text-error">No narrative content was returned.</p>';
     return;
   }
 
-  // Convert markdown-ish text to HTML
+  // ── Safety: strip any accidental title repetition from body ──
+  // Remove markdown heading if it matches the title
+  const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  text = text
+    .replace(new RegExp(`^#+\\s*${escapedTitle}\\s*$`, 'gmi'), '')
+    .replace(new RegExp(`^\\*\\*${escapedTitle}\\*\\*\\s*$`, 'gmi'), '')
+    .replace(new RegExp(`^${escapedTitle}\\s*$`, 'gmi'), '')
+    .replace(/^#+\s*/gm, '')   // strip ALL remaining # heading markers
+    .trim();
+
+  // ── Log quality metrics ────────────────────────────────────
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const chars = text.length;
+  console.log(`[renderNarrative] title="${title}" | ${words} words | ${chars} chars`);
+
+  // ── Render: title is shown as a styled heading ABOVE the prose ──
+  // The prose box itself only contains the body paragraphs.
   const html = text.split('\n').map(line => {
-    if (line.startsWith('## ')) return `<h2 class="font-headline-md text-headline-md text-primary mt-4 mb-2">${escHtml(line.replace('## ', ''))}</h2>`;
-    if (line.startsWith('# '))  return `<h1 class="font-headline-md text-headline-md text-primary mt-4 mb-2">${escHtml(line.replace('# ', ''))}</h1>`;
-    if (line.startsWith('**') && line.endsWith('**')) return `<p class="font-bold mb-2">${escHtml(line.replace(/\*\*/g, ''))}</p>`;
-    return line.trim() ? `<p class="mb-3 leading-relaxed text-on-surface font-body-md">${escHtml(line)}</p>` : '';
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    return `<p class="mb-4 leading-relaxed text-on-surface font-body-md">${escHtml(trimmed)}</p>`;
   }).join('');
 
-  output.innerHTML = `<h1 class="font-headline-md text-headline-md text-primary mb-4">${escHtml(json.title || json.route || 'Trip Narrative')}</h1>${html}`;
+  // Inject heading separately above prose, inside the narrative section
+  output.innerHTML =
+    `<h2 class="font-headline-md text-headline-md text-primary mb-5 pb-4 border-b border-outline-variant">${escHtml(title)}</h2>` +
+    (html || '<p class="text-on-surface-variant">No content generated.</p>');
 
-  // Story elements sidebar
+  // ── Show quality badge ─────────────────────────────────────
+  const qualityBadge = document.getElementById('narrativeQuality');
+  if (qualityBadge) {
+    const ok = words >= 150 && chars >= 3000;
+    qualityBadge.textContent = `${words} words · ${chars.toLocaleString()} chars`;
+    qualityBadge.className   = ok
+      ? 'text-xs font-label-md px-3 py-1 rounded-full bg-tertiary-fixed/40 text-tertiary'
+      : 'text-xs font-label-md px-3 py-1 rounded-full bg-error-container text-error';
+    qualityBadge.style.display = 'inline-flex';
+  }
+
+  // ── Story elements sidebar ─────────────────────────────────
   const fd = lastFormData || {};
   const elemRoute  = document.getElementById('elemRoute');
   const elemTone   = document.getElementById('elemTone');
   const elemDriver = document.getElementById('elemDriver');
-  if (elemRoute)  elemRoute.textContent  = fd.route   || '—';
-  if (elemTone)   elemTone.textContent   = fd.tone    || '—';
-  if (elemDriver) elemDriver.textContent = fd.driverName || '—';
+  if (elemRoute)  elemRoute.textContent  = fd.route      || json.route      || '—';
+  if (elemTone)   elemTone.textContent   = fd.tone       || json.tone       || '—';
+  if (elemDriver) elemDriver.textContent = fd.driverName || json.driverName || '—';
 
-  // Show rating section
+  // ── Show rating section ────────────────────────────────────
   const ratingSection = document.getElementById('ratingSection');
   if (ratingSection) ratingSection.style.display = 'block';
 }
