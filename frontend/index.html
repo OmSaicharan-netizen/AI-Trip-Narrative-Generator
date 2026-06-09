@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Trip Narrative Generator | Manivtha Tours & Travels</title>
-  <meta name="description" content="Transform trip details into captivating travel blog stories. Powered by AI for Manivtha Tours & Travels, Hyderabad.">
-  <meta name="theme-color" content="#060c18">
+  <title>Manivtha Tours | AI Trip Narrative Generator</title>
+  <meta name="description" content="Transform your trip memories into immersive AI-crafted narratives. Manivtha Tours & Travels, Hyderabad.">
+  <meta name="theme-color" content="#f7f9fb">
 
-  <!-- Google Fonts -->
+  <!-- Stitch Design System: Horizon Ethos Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Work+Sans:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -22,393 +22,1053 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/style.css">
+  <!-- Tailwind CSS (Horizon Ethos config) -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'primary':                  '#003c90',
+            'on-primary':               '#ffffff',
+            'primary-container':        '#0f52ba',
+            'on-primary-container':     '#bcceff',
+            'primary-fixed':            '#d9e2ff',
+            'primary-fixed-dim':        '#b0c6ff',
+            'on-primary-fixed':         '#001945',
+            'on-primary-fixed-variant': '#00419c',
+            'inverse-primary':          '#b0c6ff',
+            'secondary':                '#ac3509',
+            'on-secondary':             '#ffffff',
+            'secondary-container':      '#fe6f42',
+            'on-secondary-container':   '#631800',
+            'secondary-fixed':          '#ffdbd0',
+            'secondary-fixed-dim':      '#ffb59f',
+            'on-secondary-fixed':       '#3a0a00',
+            'on-secondary-fixed-variant':'#852300',
+            'tertiary':                 '#004940',
+            'on-tertiary':              '#ffffff',
+            'tertiary-container':       '#006358',
+            'on-tertiary-container':    '#62e2ce',
+            'tertiary-fixed':           '#79f7e3',
+            'tertiary-fixed-dim':       '#59dbc7',
+            'on-tertiary-fixed':        '#00201c',
+            'on-tertiary-fixed-variant':'#005047',
+            'error':                    '#ba1a1a',
+            'on-error':                 '#ffffff',
+            'error-container':          '#ffdad6',
+            'on-error-container':       '#93000a',
+            'background':               '#f7f9fb',
+            'on-background':            '#191c1e',
+            'surface':                  '#f7f9fb',
+            'surface-dim':              '#d8dadc',
+            'surface-bright':           '#f7f9fb',
+            'surface-variant':          '#e0e3e5',
+            'on-surface':               '#191c1e',
+            'on-surface-variant':       '#434653',
+            'surface-tint':             '#1d59c1',
+            'surface-container-lowest': '#ffffff',
+            'surface-container-low':    '#f2f4f6',
+            'surface-container':        '#eceef0',
+            'surface-container-high':   '#e6e8ea',
+            'surface-container-highest':'#e0e3e5',
+            'inverse-surface':          '#2d3133',
+            'inverse-on-surface':       '#eff1f3',
+            'outline':                  '#737784',
+            'outline-variant':          '#c3c6d5',
+          },
+          borderRadius: {
+            'DEFAULT': '0.5rem',
+            'sm': '0.25rem',
+            'md': '0.75rem',
+            'lg': '1rem',
+            'xl': '1.5rem',
+            'full': '9999px',
+          },
+          spacing: {
+            'gutter': '24px',
+            'container-max': '1280px',
+            'margin-mobile': '16px',
+            'margin-desktop': '40px',
+            'base': '8px',
+          },
+          fontFamily: {
+            'sans':         ['Work Sans', 'system-ui', 'sans-serif'],
+            'display-lg':   ['Plus Jakarta Sans', 'sans-serif'],
+            'headline-lg':  ['Plus Jakarta Sans', 'sans-serif'],
+            'headline-md':  ['Plus Jakarta Sans', 'sans-serif'],
+            'body-lg':      ['Work Sans', 'sans-serif'],
+            'body-md':      ['Work Sans', 'sans-serif'],
+            'label-md':     ['Work Sans', 'sans-serif'],
+          },
+          fontSize: {
+            'display-lg':        ['48px', { lineHeight: '56px', letterSpacing: '-0.02em', fontWeight: '700' }],
+            'headline-lg':       ['32px', { lineHeight: '40px', fontWeight: '700' }],
+            'headline-lg-mobile':['28px', { lineHeight: '36px', fontWeight: '700' }],
+            'headline-md':       ['24px', { lineHeight: '32px', fontWeight: '600' }],
+            'body-lg':           ['18px', { lineHeight: '28px', fontWeight: '400' }],
+            'body-md':           ['16px', { lineHeight: '24px', fontWeight: '400' }],
+            'label-md':          ['14px', { lineHeight: '20px', letterSpacing: '0.05em', fontWeight: '600' }],
+          },
+          boxShadow: {
+            'ambient': '0 4px 20px rgba(15, 82, 186, 0.08)',
+            'ambient-lg': '0 8px 40px rgba(15, 82, 186, 0.12)',
+            'primary': '0 4px 20px rgba(0, 60, 144, 0.25)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ── Horizon Ethos Design System ─────────────────────────── */
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    .ms-filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+    /* Glass Components */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glass-nav {
+      background: rgba(247, 249, 251, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Text gradient */
+    .text-gradient {
+      background: linear-gradient(135deg, #003c90 0%, #0f52ba 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Hero overlay */
+    .hero-gradient { background: linear-gradient(to bottom, rgba(25,28,30,0.35), rgba(25,28,30,0.08)); }
+
+    /* View system */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Step transition */
+    .step-pane { transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Parallax */
+    .parallax {
+      background-attachment: fixed;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    /* Narrative prose */
+    .narrative-prose { line-height: 1.85; }
+    .narrative-prose p { margin-bottom: 1rem; }
+    .narrative-prose h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 24px; font-weight: 700;
+      color: #003c90; margin-bottom: 1rem;
+    }
+    .narrative-prose h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 20px; font-weight: 600;
+      color: #003c90; margin: 1.5rem 0 0.75rem;
+    }
+
+    /* TTS Player */
+    .tts-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(0,60,144,0.06); border-radius: 12px;
+      padding: 14px 18px; border: 1px solid #c3c6d5;
+    }
+    .tts-progress {
+      flex: 1; height: 4px; border-radius: 9999px;
+      background: #c3c6d5; overflow: hidden; cursor: pointer;
+    }
+    .tts-progress-fill {
+      height: 100%; background: #003c90;
+      border-radius: 9999px; width: 0%;
+      transition: width 0.3s linear;
+    }
+    .tts-playing .tts-progress-fill { animation: none; }
+
+    /* Waveform animation */
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.4); }
+      50%       { transform: scaleY(1);   }
+    }
+    .wave-bar { display: inline-block; width: 3px; border-radius: 2px; background: #003c90; animation: wave 1s ease-in-out infinite; }
+    .wave-bar:nth-child(2) { animation-delay: 0.15s; }
+    .wave-bar:nth-child(3) { animation-delay: 0.3s; }
+    .wave-bar:nth-child(4) { animation-delay: 0.45s; }
+    .wave-bar:nth-child(5) { animation-delay: 0.6s; }
+
+    /* Star rating */
+    .star { cursor: pointer; font-size: 24px; color: #c3c6d5; transition: all 0.15s; }
+    .star:hover, .star.hovered, .star.active { color: #fe6f42; transform: scale(1.2); }
+
+    /* Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #eceef0 25%, #e0e3e5 50%, #eceef0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: #191c1e; color: #fff; padding: 12px 24px;
+      border-radius: 9999px; font-family: 'Work Sans', sans-serif; font-size: 14px;
+      font-weight: 600; z-index: 9999; transition: transform 0.3s ease;
+      pointer-events: none; white-space: nowrap; max-width: 90vw;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: #004940; }
+    #toast.error { background: #ba1a1a; }
+    #toast.info { background: #003c90; }
+
+    /* Modal */
+    #detailModal {
+      position: fixed; inset: 0; background: rgba(25,28,30,0.7);
+      z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+    #detailModal.open { display: flex; }
+    #detailModalBox {
+      background: #fff; border-radius: 24px; padding: 40px;
+      max-width: 760px; width: 100%; max-height: 85vh; overflow-y: auto;
+      position: relative; box-shadow: 0 24px 80px rgba(0,60,144,0.15);
+    }
+
+    /* Pagination */
+    .page-btn {
+      width: 36px; height: 36px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: all 0.15s;
+      border: 1px solid #c3c6d5; color: #434653; background: #fff;
+    }
+    .page-btn:hover { background: #d9e2ff; border-color: #003c90; color: #003c90; }
+    .page-btn.active { background: #003c90; color: #fff; border-color: #003c90; }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Data table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { text-align: left; padding: 10px 14px; font-weight: 700; color: #434653; background: #f2f4f6; border-bottom: 1px solid #c3c6d5; }
+    .data-table td { padding: 10px 14px; border-bottom: 1px solid #eceef0; }
+    .data-table tr:hover td { background: #f7f9fb; }
+
+    /* Badge */
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    /* No scrollbar */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Line clamp */
+    .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+    /* Auth wall */
+    .auth-wall { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+    .auth-card { background: #fff; border-radius: 24px; padding: 48px; max-width: 440px; width: 100%; box-shadow: 0 4px 20px rgba(15,82,186,0.08); border: 1px solid #c3c6d5; }
+
+    /* Smooth scroll for anchor links */
+    html { scroll-behavior: smooth; }
+  </style>
 </head>
-<body>
+<body class="bg-background text-on-surface font-sans selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen">
 
-<div id="app" class="app-shell">
+<!-- ══════════════════════════════════════════════════════════
+     GLOBAL NAVIGATION  (Stitch: TopNavBar — all screens)
+══════════════════════════════════════════════════════════ -->
+<header class="glass-nav shadow-sm sticky top-0 z-50 border-b border-outline-variant/50" id="mainNav">
+  <nav class="flex justify-between items-center w-full px-4 md:px-margin-desktop py-4 max-w-container-max mx-auto">
 
-  <!-- ══════════════════════════════════════════════════════
-       SIDEBAR
-  ══════════════════════════════════════════════════════ -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-icon">🚗</div>
-        <div class="logo-text">
-          <span class="logo-title">Manivtha</span>
-          <span class="logo-subtitle">Tours & Travels</span>
+    <!-- Logo -->
+    <div class="flex items-center gap-8">
+      <a href="#explore" class="font-headline-md text-headline-md font-bold text-primary" data-nav="explore">
+        Manivtha Tours
+      </a>
+
+      <!-- Desktop nav links -->
+      <div class="hidden md:flex items-center gap-6 font-body-md text-body-md">
+        <a href="#explore"  class="nav-link text-primary border-b-2 border-primary pb-1"       data-nav="explore">Explore</a>
+        <a href="#history"  class="nav-link text-on-surface-variant hover:text-primary transition-colors" data-nav="history">My Narratives</a>
+        <a href="#generate" class="nav-link text-on-surface-variant hover:text-primary transition-colors" data-nav="generate">Create New</a>
+        <a href="#analytics" class="nav-link text-on-surface-variant hover:text-primary transition-colors" data-nav="analytics">Analytics</a>
+      </div>
+    </div>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-3">
+      <!-- Search bar (desktop) -->
+      <div class="hidden sm:flex items-center gap-2 px-3 py-2 bg-surface-container-low rounded-full border border-outline-variant">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px;">search</span>
+        <input type="search" id="globalSearch" placeholder="Search stories..."
+               class="bg-transparent border-none focus:ring-0 text-sm w-32 font-body-md text-on-surface placeholder:text-outline">
+      </div>
+
+      <!-- Notifications -->
+      <button class="p-2 hover:bg-surface-container rounded-lg transition-all text-on-surface-variant" aria-label="Notifications">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+
+      <!-- Create New CTA -->
+      <a href="#generate" data-nav="generate"
+         class="hidden md:flex items-center gap-2 bg-primary-container text-white px-5 py-2 rounded-full font-label-md text-label-md hover:shadow-primary transition-all active:scale-95">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+        Create New
+      </a>
+
+      <!-- User avatar (when signed in) -->
+      <div id="userInfo" class="hidden items-center gap-2">
+        <div class="w-9 h-9 rounded-full bg-primary-container overflow-hidden border-2 border-primary cursor-pointer flex items-center justify-center text-white font-bold text-sm" id="userAvatar">👤</div>
+        <div class="hidden md:flex flex-col">
+          <span class="text-xs font-semibold text-on-surface" id="userName"></span>
+          <button id="logoutBtn" class="text-xs text-error hover:underline text-left">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Mobile menu toggle -->
+      <button class="md:hidden p-2 text-on-surface-variant" id="mobileMenuBtn" aria-label="Menu">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile nav -->
+  <div class="hidden md:hidden border-t border-outline-variant bg-surface" id="mobileMenu">
+    <div class="flex flex-col px-4 py-3 gap-1">
+      <a href="#explore"   class="nav-link py-2 px-3 rounded-lg text-on-surface-variant" data-nav="explore">Explore</a>
+      <a href="#history"   class="nav-link py-2 px-3 rounded-lg text-on-surface-variant" data-nav="history">My Narratives</a>
+      <a href="#generate"  class="nav-link py-2 px-3 rounded-lg text-on-surface-variant" data-nav="generate">Create New</a>
+      <a href="#analytics" class="nav-link py-2 px-3 rounded-lg text-on-surface-variant" data-nav="analytics">Analytics</a>
+      <a href="#admin"     class="nav-link py-2 px-3 rounded-lg text-on-surface-variant" data-nav="admin">Admin</a>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW: EXPLORE / LANDING  (Stitch: landing_page)
+══════════════════════════════════════════════════════════ -->
+<div id="view-explore" class="view active">
+
+  <!-- Hero Section -->
+  <section class="relative h-[780px] md:h-[870px] flex items-center overflow-hidden">
+    <div class="absolute inset-0 z-0">
+      <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1920&q=80"
+           alt="Mountain lake at sunrise" class="w-full h-full object-cover">
+      <div class="absolute inset-0 hero-gradient"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent"></div>
+    </div>
+
+    <div class="relative z-10 w-full px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+      <div class="max-w-2xl text-white">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border border-white/30 text-sm font-semibold text-primary mb-6">
+          <span class="material-symbols-outlined ms-filled" style="font-size:18px;color:#fe6f42;">auto_awesome</span>
+          AI-Powered Storytelling
+        </div>
+        <h1 class="font-display-lg text-display-lg mb-6 leading-tight">
+          Your Journey,<br>
+          <span style="color:#ffb59f;">Perfectly Narrated.</span>
+        </h1>
+        <p class="font-body-lg text-body-lg mb-10 text-white/90">
+          Turn your raw travel photos and scattered notes into immersive, AI-crafted narratives. Share the soul of your adventure, not just the itinerary.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <a href="#generate" data-nav="generate"
+             class="bg-secondary-container text-white px-8 py-4 rounded-xl font-headline-md shadow-xl hover:-translate-y-0.5 transition-all active:scale-95 text-center">
+            Start Your Story
+          </a>
+          <a href="#history" data-nav="history"
+             class="glass-card text-on-surface px-8 py-4 rounded-xl font-headline-md border border-white/30 hover:bg-white/90 transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined">play_circle</span>
+            My Narratives
+          </a>
         </div>
       </div>
     </div>
 
-    <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
-      <a href="#generate" class="nav-link active" data-view="generate" id="nav-generate" aria-label="Generate Story">
-        <span class="nav-icon">✨</span>
-        <span class="nav-label">Generate Story</span>
-      </a>
-      <a href="#history" class="nav-link" data-view="history" id="nav-history" aria-label="History">
-        <span class="nav-icon">📜</span>
-        <span class="nav-label">History</span>
-      </a>
-      <a href="#analytics" class="nav-link" data-view="analytics" id="nav-analytics" aria-label="Analytics">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Analytics</span>
-      </a>
-      <a href="#admin" class="nav-link" data-view="admin" id="nav-admin" aria-label="Admin Panel">
-        <span class="nav-icon">🔐</span>
-        <span class="nav-label">Admin</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-info" id="userInfo" style="display:none" aria-live="polite">
-        <div class="user-avatar" id="userAvatar">👤</div>
-        <div class="user-details">
-          <span class="user-name" id="userName"></span>
-          <button class="logout-btn" id="logoutBtn">Sign Out</button>
+    <!-- Floating stats badge -->
+    <div class="absolute bottom-12 right-8 hidden lg:block">
+      <div class="glass-card p-6 rounded-2xl border border-white/20 shadow-2xl flex items-center gap-4">
+        <div class="bg-secondary-fixed w-12 h-12 rounded-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-secondary ms-filled">auto_awesome</span>
+        </div>
+        <div>
+          <p class="font-bold text-primary" id="heroTotal">12,400+</p>
+          <p class="text-sm text-on-surface-variant">Stories generated</p>
         </div>
       </div>
-      <div class="version-info">v1.0.0 &nbsp;·&nbsp; Internship 2026</div>
     </div>
-  </aside>
+  </section>
 
-  <!-- ══════════════════════════════════════════════════════
-       MAIN CONTENT
-  ══════════════════════════════════════════════════════ -->
-  <main class="main-content" id="mainContent">
-
-    <!-- ─── GENERATE VIEW ─────────────────────────────────── -->
-    <div class="view active" id="view-generate">
-      <!-- Hero -->
-      <section class="hero-section" aria-label="Page hero">
-        <div class="hero-content">
-          <div class="hero-badge">✨ AI-Powered Storytelling</div>
-          <h1 class="hero-title">
-            Turn Every Trip Into a<br>
-            <span class="gradient-text">Compelling Story</span>
-          </h1>
-          <p class="hero-subtitle">
-            Input route details and let AI craft an engaging travel narrative for your blog and social media — in seconds.
-          </p>
+  <!-- How it Works: Bento Grid -->
+  <section class="py-24 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+    <div class="text-center mb-16">
+      <h2 class="font-headline-lg text-headline-lg text-primary mb-4">Magic in Every Milestone</h2>
+      <p class="text-on-surface-variant max-w-xl mx-auto font-body-md">
+        Our AI analyzes your trip details and emotions to craft a travelogue that feels as real as the journey itself.
+      </p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+      <div class="bg-white p-8 rounded-3xl shadow-ambient border border-outline-variant hover:shadow-ambient-lg transition-shadow group">
+        <div class="w-14 h-14 bg-primary-fixed rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-primary text-3xl">edit_note</span>
         </div>
-      </section>
+        <h3 class="font-headline-md text-headline-md mb-3">Enter Trip Details</h3>
+        <p class="text-on-surface-variant font-body-md">Share your route, driver, highlights, and tone. Our engine processes them instantly.</p>
+      </div>
+      <div class="bg-primary text-white p-8 rounded-3xl shadow-lg relative overflow-hidden">
+        <div class="relative z-10">
+          <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-white text-3xl">psychology</span>
+          </div>
+          <h3 class="font-headline-md text-headline-md mb-3">AI Synthesis</h3>
+          <p class="text-white/80 font-body-md">Gemini AI analyzes context, route, and sentiment to weave a cohesive, emotive narrative.</p>
+        </div>
+      </div>
+      <div class="bg-white p-8 rounded-3xl shadow-ambient border border-outline-variant hover:shadow-ambient-lg transition-shadow group">
+        <div class="w-14 h-14 bg-tertiary-fixed rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-tertiary text-3xl">record_voice_over</span>
+        </div>
+        <h3 class="font-headline-md text-headline-md mb-3">Narrate & Share</h3>
+        <p class="text-on-surface-variant font-body-md">Listen to your story read aloud, rate it, copy, download, and share across platforms.</p>
+      </div>
+    </div>
+  </section>
 
-      <!-- Input Form -->
-      <section class="form-section" aria-label="Trip input form">
-        <div class="glass-card">
-          <h2 class="section-title">Trip Details</h2>
-          <form id="narrativeForm" class="narrative-form" novalidate>
-            <div class="form-grid">
+  <!-- Trending Stories (pulled from backend) -->
+  <section class="bg-surface-container-low py-24">
+    <div class="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+        <div>
+          <h2 class="font-headline-lg text-headline-lg text-primary mb-2">Recent Narratives</h2>
+          <p class="text-on-surface-variant font-body-md">Latest stories from our Manivtha community.</p>
+        </div>
+        <a href="#history" data-nav="history" class="text-primary font-label-md flex items-center gap-2 hover:gap-4 transition-all">
+          View All <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter" id="trendingGrid">
+        <!-- Loaded by JS -->
+        <div class="bg-white rounded-3xl overflow-hidden shadow-ambient border border-outline-variant h-80 skeleton"></div>
+        <div class="bg-white rounded-3xl overflow-hidden shadow-ambient border border-outline-variant h-80 skeleton hidden md:block"></div>
+        <div class="bg-white rounded-3xl overflow-hidden shadow-ambient border border-outline-variant h-80 skeleton hidden lg:block"></div>
+      </div>
+    </div>
+  </section>
 
+  <!-- CTA Section -->
+  <section class="py-24 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+    <div class="bg-primary-container rounded-[2.5rem] p-12 md:p-24 text-center text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-0 left-0 w-64 h-64 bg-secondary-container/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
+      <h2 class="font-display-lg text-display-lg mb-6 relative z-10">Ready to tell your story?</h2>
+      <p class="font-body-lg text-body-lg mb-12 text-on-primary-container/90 max-w-2xl mx-auto relative z-10">
+        Join Manivtha's AI-powered narrative platform. Transform any trip into a compelling story in seconds.
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4 relative z-10">
+        <a href="#generate" data-nav="generate"
+           class="bg-secondary-container text-white px-10 py-5 rounded-2xl font-headline-md shadow-2xl hover:bg-secondary transition-all active:scale-95">
+          Generate Your First Story
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-surface-container border-t border-outline-variant">
+    <div class="w-full px-margin-desktop py-12 flex flex-col items-center gap-base max-w-container-max mx-auto">
+      <div class="flex flex-col md:flex-row justify-between w-full items-center md:items-start gap-12 mb-8">
+        <div class="text-center md:text-left">
+          <h3 class="font-headline-md text-headline-md text-primary mb-4">Manivtha Tours</h3>
+          <p class="text-on-surface-variant max-w-xs font-body-md">Transforming the way you remember and share your travels using state-of-the-art AI.</p>
+        </div>
+        <div class="flex flex-wrap justify-center gap-8 font-body-md">
+          <a href="#explore"   data-nav="explore"   class="text-on-surface-variant hover:text-secondary transition-colors">Explore</a>
+          <a href="#history"   data-nav="history"   class="text-on-surface-variant hover:text-secondary transition-colors">My Narratives</a>
+          <a href="#analytics" data-nav="analytics" class="text-on-surface-variant hover:text-secondary transition-colors">Analytics</a>
+          <a href="#admin"     data-nav="admin"     class="text-on-surface-variant hover:text-secondary transition-colors">Admin</a>
+        </div>
+      </div>
+      <div class="w-full h-px bg-outline-variant/40 mb-6"></div>
+      <p class="font-body-md text-on-surface-variant text-center opacity-80">© 2026 Manivtha Tours and Travels. AI Trip Narrative Generator.</p>
+    </div>
+  </footer>
+</div><!-- /#view-explore -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW: GENERATE  (Stitch: create_new_narrative — 3-step wizard)
+══════════════════════════════════════════════════════════ -->
+<div id="view-generate" class="view">
+  <main class="flex-grow flex flex-col items-center py-16 px-margin-mobile md:px-margin-desktop min-h-[80vh] bg-background">
+    <div class="w-full max-w-4xl">
+
+      <!-- Progress Indicator -->
+      <div class="mb-12 relative">
+        <div class="flex justify-between items-center relative z-10">
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white font-bold transition-all" id="step-dot-1">1</div>
+            <span class="font-label-md text-label-md text-primary" id="step-label-1">Trip Details</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high text-on-surface-variant font-bold transition-all" id="step-dot-2">2</div>
+            <span class="font-label-md text-label-md text-on-surface-variant" id="step-label-2">Moments</span>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high text-on-surface-variant font-bold transition-all" id="step-dot-3">3</div>
+            <span class="font-label-md text-label-md text-on-surface-variant" id="step-label-3">Narrative</span>
+          </div>
+        </div>
+        <div class="absolute top-5 left-0 w-full h-0.5 bg-surface-container-high -z-0">
+          <div class="h-full bg-primary transition-all duration-500" style="width:0%" id="progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Content Card -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-ambient border border-outline-variant overflow-hidden min-h-[500px] flex flex-col relative">
+
+        <!-- ── STEP 1: Trip Details ── -->
+        <section class="step-pane p-8 md:p-12 space-y-8 opacity-100" id="step-1">
+          <div class="space-y-2">
+            <h1 class="font-headline-lg text-headline-lg text-primary">Where did your heart wander?</h1>
+            <p class="font-body-lg text-body-lg text-on-surface-variant">Let's start with the coordinates of your journey.</p>
+          </div>
+
+          <form id="narrativeForm" novalidate class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Driver Name -->
-              <div class="input-group">
-                <input type="text" id="driverName" name="driverName" required placeholder=" " autocomplete="name" aria-required="true">
-                <label for="driverName">Driver / Staff Name</label>
-                <span class="input-icon" aria-hidden="true">👤</span>
+              <div class="space-y-2">
+                <label class="font-label-md text-label-md text-on-surface block" for="driverName">Driver / Staff Name *</label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">person</span>
+                  <input type="text" id="driverName" name="driverName" required autocomplete="name"
+                         placeholder="e.g., Ravi Kumar"
+                         class="w-full pl-12 pr-4 py-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md">
+                </div>
               </div>
 
               <!-- Route -->
-              <div class="input-group">
-                <input type="text" id="route" name="route" required placeholder=" " aria-required="true"
-                       aria-describedby="routeHint">
-                <label for="route">Route (From → To)</label>
-                <span class="input-icon" aria-hidden="true">🗺️</span>
-              </div>
-
-              <!-- Landmarks -->
-              <div class="input-group full-width">
-                <textarea id="landmarks" name="landmarks" rows="3" placeholder=" "
-                          aria-describedby="landmarksHint"></textarea>
-                <label for="landmarks">Landmarks Visited</label>
-                <span class="input-hint" id="landmarksHint">Separate with commas (e.g., Charminar, Golconda Fort, Hussain Sagar Lake)</span>
-              </div>
-
-              <!-- Highlights -->
-              <div class="input-group full-width">
-                <textarea id="highlights" name="highlights" rows="3" placeholder=" "
-                          aria-describedby="highlightsHint"></textarea>
-                <label for="highlights">Trip Highlights</label>
-                <span class="input-hint" id="highlightsHint">What made this trip special? (e.g., Stunning sunrise, mist-covered valleys, great food stops)</span>
+              <div class="space-y-2">
+                <label class="font-label-md text-label-md text-on-surface block" for="route">Route (From → To) *</label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">route</span>
+                  <input type="text" id="route" name="route" required
+                         placeholder="e.g., Hyderabad to Warangal"
+                         class="w-full pl-12 pr-4 py-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md">
+                </div>
               </div>
 
               <!-- Trip Date -->
-              <div class="input-group">
-                <input type="date" id="tripDate" name="tripDate" placeholder=" ">
-                <label for="tripDate">Trip Date</label>
-                <span class="input-icon" aria-hidden="true">📅</span>
+              <div class="space-y-2">
+                <label class="font-label-md text-label-md text-on-surface block" for="tripDate">Trip Date</label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">calendar_month</span>
+                  <input type="date" id="tripDate" name="tripDate"
+                         class="w-full pl-12 pr-4 py-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md">
+                </div>
               </div>
 
               <!-- Vehicle Type -->
-              <div class="select-group">
-                <label class="select-label" for="vehicleType">Vehicle Type</label>
-                <select id="vehicleType" name="vehicleType">
-                  <option value="Sedan">🚗 Sedan</option>
-                  <option value="SUV">🚙 SUV</option>
-                  <option value="Innova Crysta">🚕 Innova Crysta</option>
-                  <option value="Tempo Traveller">🚐 Tempo Traveller</option>
-                  <option value="Luxury Sedan">✨ Luxury Sedan</option>
-                </select>
-              </div>
-
-              <!-- Narrative Tone -->
-              <div class="select-group">
-                <label class="select-label" for="tone">Narrative Tone</label>
-                <select id="tone" name="tone">
-                  <option value="Adventurous">⚡ Adventurous</option>
-                  <option value="Poetic">🌸 Poetic</option>
-                  <option value="Informative">📖 Informative</option>
-                  <option value="Humorous">😄 Humorous</option>
-                </select>
-              </div>
-
-            </div><!-- /.form-grid -->
-
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary btn-generate" id="generateBtn" aria-label="Generate AI narrative">
-                <span class="btn-icon" aria-hidden="true">✨</span>
-                <span class="btn-text">Generate Narrative</span>
-                <div class="btn-loader" id="generateLoader" aria-hidden="true">
-                  <div class="loader-ring"></div>
+              <div class="space-y-2">
+                <label class="font-label-md text-label-md text-on-surface block" for="vehicleType">Vehicle</label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">directions_car</span>
+                  <select id="vehicleType" name="vehicleType"
+                          class="w-full pl-12 pr-4 py-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md appearance-none">
+                    <option value="Sedan">🚗 Sedan</option>
+                    <option value="SUV">🚙 SUV</option>
+                    <option value="Innova Crysta">🚕 Innova Crysta</option>
+                    <option value="Tempo Traveller">🚐 Tempo Traveller</option>
+                    <option value="Luxury Sedan">✨ Luxury Sedan</option>
+                  </select>
                 </div>
+              </div>
+            </div>
+
+            <!-- Narrative Tone -->
+            <div class="space-y-3">
+              <label class="font-label-md text-label-md text-on-surface block">What was the mood?</label>
+              <div class="flex flex-wrap gap-3" id="toneChips">
+                <button type="button" class="tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-primary-fixed text-on-primary-fixed border-primary" data-tone="Adventurous">⚡ Adventurous</button>
+                <button type="button" class="tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-surface-container text-on-surface border-transparent hover:border-primary" data-tone="Poetic">🌸 Poetic</button>
+                <button type="button" class="tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-surface-container text-on-surface border-transparent hover:border-primary" data-tone="Informative">📖 Informative</button>
+                <button type="button" class="tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-surface-container text-on-surface border-transparent hover:border-primary" data-tone="Humorous">😄 Humorous</button>
+              </div>
+              <input type="hidden" id="tone" name="tone" value="Adventurous">
+            </div>
+
+            <div class="pt-4 flex justify-end">
+              <button type="button" onclick="goToStep(2)"
+                      class="bg-secondary-container text-white px-10 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:shadow-lg transition-all active:scale-95">
+                Continue to Moments
+                <span class="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
           </form>
-        </div>
-      </section>
+        </section>
 
-      <!-- Output Section -->
-      <section class="output-section" id="outputSection" style="display:none" aria-live="polite" aria-label="Generated narrative">
-        <div class="glass-card output-card">
-          <div class="output-header">
-            <h2 class="section-title">Generated Narrative</h2>
-            <div class="output-actions">
-              <button class="btn btn-ghost" id="copyBtn" aria-label="Copy narrative to clipboard">
-                <span aria-hidden="true">📋</span> Copy
-              </button>
-              <button class="btn btn-ghost" id="downloadBtn" aria-label="Download narrative as text file">
-                <span aria-hidden="true">📥</span> Download
-              </button>
-              <button class="btn btn-ghost" id="regenerateBtn" aria-label="Regenerate with different AI response">
-                <span aria-hidden="true">🔄</span> Regenerate
-              </button>
+        <!-- ── STEP 2: Trip Moments ── -->
+        <section class="step-pane hidden opacity-0 p-8 md:p-12 space-y-8" id="step-2">
+          <div class="space-y-2">
+            <h2 class="font-headline-lg text-headline-lg text-primary">Your captured moments</h2>
+            <p class="font-body-lg text-body-lg text-on-surface-variant">Add landmarks and highlights to enrich your narrative.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Landmarks -->
+            <div class="space-y-2">
+              <label class="font-label-md text-label-md text-on-surface block" for="landmarks">Landmarks Visited</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-4 text-outline" style="font-size:20px;">location_on</span>
+                <textarea id="landmarks" name="landmarks" rows="3"
+                          placeholder="e.g., Charminar, Golconda Fort, Hussain Sagar Lake"
+                          class="w-full pl-12 pr-4 pt-4 pb-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md resize-none"></textarea>
+              </div>
+              <p class="text-xs text-outline">Separate with commas</p>
+            </div>
+
+            <!-- Highlights -->
+            <div class="space-y-2">
+              <label class="font-label-md text-label-md text-on-surface block" for="highlights">Trip Highlights</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-4 top-4 text-outline" style="font-size:20px;">star</span>
+                <textarea id="highlights" name="highlights" rows="3"
+                          placeholder="e.g., Stunning sunrise, mist-covered valleys, great food stops"
+                          class="w-full pl-12 pr-4 pt-4 pb-4 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all bg-white text-on-surface font-body-md resize-none"></textarea>
+              </div>
+              <p class="text-xs text-outline">What made this trip special?</p>
             </div>
           </div>
-          <div class="output-content" id="outputContent" role="article"></div>
 
-          <!-- Rating -->
-          <div class="rating-section" id="ratingSection">
-            <h3>Rate this narrative</h3>
-            <div class="star-rating" id="starRating" role="radiogroup" aria-label="Star rating">
-              <span class="star" data-value="1" role="radio" aria-label="1 star" tabindex="0">★</span>
-              <span class="star" data-value="2" role="radio" aria-label="2 stars" tabindex="0">★</span>
-              <span class="star" data-value="3" role="radio" aria-label="3 stars" tabindex="0">★</span>
-              <span class="star" data-value="4" role="radio" aria-label="4 stars" tabindex="0">★</span>
-              <span class="star" data-value="5" role="radio" aria-label="5 stars" tabindex="0">★</span>
+          <!-- Upload area (visual only — future feature) -->
+          <div class="border-2 border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center justify-center gap-4 bg-background hover:bg-surface-container transition-colors cursor-pointer group">
+            <div class="w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined text-4xl">cloud_upload</span>
             </div>
-            <input type="text" id="ratingComment" class="rating-comment-input"
-                   placeholder="Add a comment about this story (optional)..."
-                   aria-label="Rating comment">
-            <button class="btn btn-secondary btn-sm" id="submitRatingBtn" style="display:none" aria-label="Submit rating">
-              Submit Rating
+            <div class="text-center">
+              <p class="font-headline-md text-on-surface">Drop photos here (coming soon)</p>
+              <p class="font-body-md text-on-surface-variant text-sm">JPG, PNG, HEIC — Max 20 photos</p>
+            </div>
+          </div>
+
+          <div class="pt-4 flex justify-between">
+            <button type="button" onclick="goToStep(1)"
+                    class="text-on-surface-variant px-6 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:bg-surface-container transition-all">
+              <span class="material-symbols-outlined">arrow_back</span> Back
+            </button>
+            <button type="button" id="generateBtn" onclick="handleGenerate()"
+                    class="bg-secondary-container text-white px-10 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:shadow-lg transition-all active:scale-95">
+              <span id="generateBtnText">Generate Narrative</span>
+              <span class="material-symbols-outlined" id="generateBtnIcon">magic_button</span>
+              <div class="hidden w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" id="generateLoader"></div>
             </button>
           </div>
-        </div>
-      </section>
-    </div><!-- /#view-generate -->
+        </section>
 
-    <!-- ─── HISTORY VIEW ──────────────────────────────────── -->
-    <div class="view" id="view-history">
-      <header class="page-header">
-        <h1>Generation History</h1>
-        <p>Browse and search all previously generated travel narratives.</p>
-      </header>
+        <!-- ── STEP 3: Narrative Output ── -->
+        <section class="step-pane hidden opacity-0 p-8 md:p-12 space-y-8" id="step-3">
+          <div class="flex justify-between items-start">
+            <div class="space-y-2">
+              <h2 class="font-headline-lg text-headline-lg text-primary">Your Narrative is Ready</h2>
+              <p class="font-body-lg text-body-lg text-on-surface-variant">AI has woven your memories into a story. Listen, refine, or share.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="copyNarrative()" class="p-2 hover:bg-surface-container rounded-lg text-primary transition-all" title="Copy">
+                <span class="material-symbols-outlined">content_copy</span>
+              </button>
+              <button onclick="downloadNarrative()" class="p-2 hover:bg-surface-container rounded-lg text-primary transition-all" title="Download">
+                <span class="material-symbols-outlined">download</span>
+              </button>
+              <button onclick="shareNarrative()" class="p-2 hover:bg-surface-container rounded-lg text-primary transition-all" title="Share">
+                <span class="material-symbols-outlined">share</span>
+              </button>
+            </div>
+          </div>
 
-      <div class="history-controls">
-        <div class="search-input-wrapper">
-          <input type="search" class="search-input" id="historySearch"
-                 placeholder="Search by driver, route, or title..."
-                 aria-label="Search history">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Left: narrative + TTS + rating -->
+            <div class="md:col-span-2 space-y-6">
+              <!-- TTS Player (narration) -->
+              <div class="tts-bar" id="ttsPlayer" style="display:none;">
+                <button id="ttsPlayBtn" onclick="toggleTTS()" class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary-container transition-all flex-shrink-0" aria-label="Play narration">
+                  <span class="material-symbols-outlined ms-filled" style="font-size:20px;">play_arrow</span>
+                </button>
+                <!-- Waveform animation (visible when playing) -->
+                <div class="flex items-end gap-0.5 h-6 px-1" id="waveform" style="display:none;">
+                  <div class="wave-bar h-2" style="animation-delay:0s"></div>
+                  <div class="wave-bar h-4" style="animation-delay:0.15s"></div>
+                  <div class="wave-bar h-6" style="animation-delay:0.3s"></div>
+                  <div class="wave-bar h-4" style="animation-delay:0.45s"></div>
+                  <div class="wave-bar h-2" style="animation-delay:0.6s"></div>
+                </div>
+                <div class="tts-progress flex-1" id="ttsProgressBar">
+                  <div class="tts-progress-fill" id="ttsProgressFill"></div>
+                </div>
+                <span class="text-sm text-on-surface-variant font-label-md flex-shrink-0" id="ttsTimer">0:00</span>
+                <!-- Voice selector -->
+                <select id="ttsVoiceSelect" class="text-xs border border-outline-variant rounded-lg px-2 py-1 bg-white text-on-surface outline-none flex-shrink-0" style="max-width:120px;">
+                  <option value="">Default</option>
+                </select>
+                <!-- Speed -->
+                <select id="ttsSpeedSelect" class="text-xs border border-outline-variant rounded-lg px-2 py-1 bg-white text-on-surface outline-none flex-shrink-0">
+                  <option value="0.8">0.8x</option>
+                  <option value="1" selected>1x</option>
+                  <option value="1.2">1.2x</option>
+                  <option value="1.5">1.5x</option>
+                </select>
+                <button onclick="stopTTS()" class="p-1 hover:bg-surface-container rounded text-on-surface-variant transition-all flex-shrink-0" title="Stop">
+                  <span class="material-symbols-outlined" style="font-size:20px;">stop</span>
+                </button>
+              </div>
+
+              <!-- Narrative Text -->
+              <div class="narrative-prose p-6 bg-background rounded-xl border border-outline-variant shadow-inner min-h-48"
+                   id="narrativeOutput">
+                <p class="text-on-surface-variant italic">Your narrative will appear here…</p>
+              </div>
+
+              <!-- Regenerate options -->
+              <div class="flex gap-4 flex-wrap">
+                <button onclick="handleRegenerate('Poetic')"
+                        class="flex-1 min-w-[140px] py-3 border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-primary-fixed transition-colors">
+                  Regenerate (Poetic)
+                </button>
+                <button onclick="handleRegenerate('Adventurous')"
+                        class="flex-1 min-w-[140px] py-3 border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-primary-fixed transition-colors">
+                  Regenerate (Adventurous)
+                </button>
+              </div>
+
+              <!-- Rating Section -->
+              <div class="border-t border-outline-variant pt-6 space-y-4" id="ratingSection" style="display:none;">
+                <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Rate this narrative</h3>
+                <div class="flex gap-2" id="starRating" role="radiogroup" aria-label="Star rating">
+                  <span class="star" data-value="1" role="radio" aria-label="1 star" tabindex="0">★</span>
+                  <span class="star" data-value="2" role="radio" aria-label="2 stars" tabindex="0">★</span>
+                  <span class="star" data-value="3" role="radio" aria-label="3 stars" tabindex="0">★</span>
+                  <span class="star" data-value="4" role="radio" aria-label="4 stars" tabindex="0">★</span>
+                  <span class="star" data-value="5" role="radio" aria-label="5 stars" tabindex="0">★</span>
+                </div>
+                <input type="text" id="ratingComment" placeholder="Add a comment (optional)..."
+                       class="w-full p-3 rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm bg-white font-body-md">
+                <button id="submitRatingBtn" onclick="submitRating()" style="display:none;"
+                        class="px-6 py-2 bg-primary text-white rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all">
+                  Submit Rating
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: story elements + publish -->
+            <div class="space-y-6">
+              <h4 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Story Elements</h4>
+              <div class="space-y-3" id="storyElements">
+                <div class="p-4 bg-surface-container rounded-lg border-l-4 border-primary">
+                  <p class="font-label-md text-label-md text-primary">Route</p>
+                  <p class="font-body-md text-on-surface text-sm" id="elemRoute">—</p>
+                </div>
+                <div class="p-4 bg-surface-container rounded-lg border-l-4 border-secondary-container">
+                  <p class="font-label-md text-label-md text-secondary">Tone</p>
+                  <p class="font-body-md text-on-surface text-sm" id="elemTone">—</p>
+                </div>
+                <div class="p-4 bg-surface-container rounded-lg border-l-4 border-tertiary-container">
+                  <p class="font-label-md text-label-md text-tertiary">Driver</p>
+                  <p class="font-body-md text-on-surface text-sm" id="elemDriver">—</p>
+                </div>
+              </div>
+
+              <div class="p-6 bg-primary-container text-white rounded-xl space-y-4">
+                <p class="font-headline-md text-headline-md">Ready to save?</p>
+                <p class="font-body-md text-body-md opacity-90">This narrative is saved to your history automatically.</p>
+                <button onclick="navigateTo('history')"
+                        class="w-full bg-secondary-container text-white py-3 rounded-lg font-label-md text-label-md shadow-lg hover:brightness-110 transition-all">
+                  View in My Narratives
+                </button>
+              </div>
+
+              <!-- Back to step 1 -->
+              <button onclick="resetWizard()"
+                      class="w-full py-3 border border-outline-variant text-on-surface-variant rounded-lg font-label-md text-label-md hover:bg-surface-container transition-all">
+                ← Create Another Story
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Loading State Overlay -->
+        <div class="hidden absolute inset-0 glass-panel z-20 flex-col items-center justify-center gap-6" id="loading-state">
+          <div class="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          <div class="text-center">
+            <p class="font-headline-md text-headline-md text-primary">Weaving your story…</p>
+            <p class="font-body-md text-on-surface-variant">Gemini AI is crafting your narrative.</p>
+          </div>
         </div>
-        <span id="historyCount" style="font-size:13px;color:var(--text-muted);"></span>
+
+      </div><!-- /.content-card -->
+    </div>
+  </main>
+</div><!-- /#view-generate -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW: HISTORY / MY NARRATIVES  (Stitch: my_narratives)
+══════════════════════════════════════════════════════════ -->
+<div id="view-history" class="view">
+  <main class="max-w-container-max mx-auto px-4 md:px-margin-desktop py-12 min-h-screen">
+
+    <!-- Page Header -->
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-gutter mb-12">
+      <div class="space-y-2">
+        <h1 class="font-headline-lg text-headline-lg text-on-surface">Your AI Narratives</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant">Relive your adventures through beautifully curated AI stories.</p>
       </div>
+      <a href="#generate" data-nav="generate"
+         class="bg-secondary-container text-white px-8 py-4 rounded-xl font-label-md text-label-md flex items-center gap-2 shadow-ambient hover:shadow-lg transition-all active:scale-95 self-start md:self-auto">
+        <span class="material-symbols-outlined ms-filled" style="font-size:20px;">add_circle</span>
+        Create New Narrative
+      </a>
+    </header>
 
-      <div class="history-grid" id="historyGrid" aria-live="polite">
-        <!-- Cards injected by JS -->
-      </div>
-
-      <div class="pagination" id="historyPagination"></div>
-    </div><!-- /#view-history -->
-
-    <!-- ─── ANALYTICS VIEW ────────────────────────────────── -->
-    <div class="view" id="view-analytics">
-      <header class="page-header">
-        <h1>Analytics Dashboard</h1>
-        <p>Real-time insights into narrative generation activity and quality.</p>
-      </header>
-
-      <div class="analytics-content">
-        <!-- KPI Cards -->
-        <div class="kpi-grid" id="kpiGrid">
-          <div class="kpi-card amber">
-            <div class="kpi-icon" aria-hidden="true">📝</div>
-            <div class="kpi-value" id="kpiTotal">—</div>
-            <div class="kpi-label">Total Narratives</div>
-          </div>
-          <div class="kpi-card teal">
-            <div class="kpi-icon" aria-hidden="true">⭐</div>
-            <div class="kpi-value" id="kpiRating">—</div>
-            <div class="kpi-label">Avg. Rating</div>
-          </div>
-          <div class="kpi-card purple">
-            <div class="kpi-icon" aria-hidden="true">🎭</div>
-            <div class="kpi-value" id="kpiTopTone">—</div>
-            <div class="kpi-label">Top Tone</div>
-          </div>
-          <div class="kpi-card green">
-            <div class="kpi-icon" aria-hidden="true">✅</div>
-            <div class="kpi-value" id="kpiRated">—</div>
-            <div class="kpi-label">Rated Stories</div>
-          </div>
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-12" id="historyStats">
+      <div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
+          <span class="material-symbols-outlined">auto_stories</span>
         </div>
-
-        <!-- Charts Row 1 -->
-        <div class="charts-grid">
-          <div class="chart-card">
-            <h3>📈 Generations Over Last 30 Days</h3>
-            <div class="chart-wrapper">
-              <canvas id="chartPerDay" aria-label="Generations per day chart"></canvas>
-            </div>
-          </div>
-          <div class="chart-card">
-            <h3>🎭 Tone Distribution</h3>
-            <div class="chart-wrapper">
-              <canvas id="chartTone" aria-label="Tone distribution chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charts Row 2 -->
-        <div class="charts-grid-3">
-          <div class="chart-card">
-            <h3>⭐ Rating Distribution</h3>
-            <div class="chart-wrapper">
-              <canvas id="chartRatings" aria-label="Rating distribution chart"></canvas>
-            </div>
-          </div>
-          <div class="chart-card">
-            <h3>🗺️ Top Routes</h3>
-            <div class="chart-wrapper">
-              <canvas id="chartRoutes" aria-label="Top routes chart"></canvas>
-            </div>
-          </div>
-          <div class="chart-card">
-            <h3>👤 Most Active Staff</h3>
-            <div class="chart-wrapper">
-              <canvas id="chartDrivers" aria-label="Most active drivers chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- High Rated Table -->
-        <div class="chart-card">
-          <h3>🏆 Recent High-Rated Narratives (4–5 ⭐)</h3>
-          <div class="data-table-wrapper" style="margin-top:16px;" id="highRatedTable">
-            <p style="padding:16px;color:var(--text-muted);font-size:14px;">Loading...</p>
-          </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Total Narratives</p>
+          <p class="font-headline-md text-headline-md" id="statTotal">—</p>
         </div>
       </div>
-    </div><!-- /#view-analytics -->
+      <div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center text-tertiary">
+          <span class="material-symbols-outlined">route</span>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Unique Routes</p>
+          <p class="font-headline-md text-headline-md" id="statRoutes">—</p>
+        </div>
+      </div>
+      <div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-secondary-fixed flex items-center justify-center text-secondary">
+          <span class="material-symbols-outlined">star</span>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Avg. Rating</p>
+          <p class="font-headline-md text-headline-md" id="statRating">—</p>
+        </div>
+      </div>
+    </div>
 
-    <!-- ─── ADMIN VIEW ─────────────────────────────────────── -->
-    <div class="view" id="view-admin">
-      <header class="page-header">
-        <h1>Admin Panel</h1>
-        <p>Manage generation data, export records, and view all stored narratives.</p>
-      </header>
+    <!-- Search + Filter -->
+    <div class="flex flex-col sm:flex-row gap-4 mb-8 items-center">
+      <div class="relative flex-1 min-w-0">
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">search</span>
+        <input type="search" id="historySearch" placeholder="Search by driver, route, or title…"
+               class="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white font-body-md text-on-surface">
+      </div>
+      <span id="historyCount" class="text-sm text-on-surface-variant whitespace-nowrap font-label-md"></span>
+    </div>
 
-      <!-- Auth Wall (shown when not logged in) -->
-      <div class="auth-wall" id="authWall">
-        <div class="auth-card">
-          <div class="auth-card-icon" aria-hidden="true">🔐</div>
-          <h2>Admin Sign In</h2>
-          <p>Sign in with your Google account or email to access the admin data viewer.</p>
+    <!-- Narrative Grid -->
+    <div class="narrative-grid" id="historyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px;" aria-live="polite">
+      <!-- Cards injected by JS -->
+    </div>
 
-          <!-- Google Sign In -->
-          <button class="btn-google" id="googleSignInBtn" aria-label="Sign in with Google">
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-              <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-              <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
-              <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
-              <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/>
-            </svg>
-            Sign in with Google
+    <!-- Pagination -->
+    <div class="flex justify-center gap-2 mt-12" id="historyPagination"></div>
+
+  </main>
+</div><!-- /#view-history -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW: ANALYTICS  (Stitch-derived, existing analytics)
+══════════════════════════════════════════════════════════ -->
+<div id="view-analytics" class="view">
+  <main class="max-w-container-max mx-auto px-4 md:px-margin-desktop py-12 min-h-screen">
+    <header class="mb-12">
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Analytics Dashboard</h1>
+      <p class="font-body-md text-on-surface-variant">Real-time insights into narrative generation activity and quality.</p>
+    </header>
+
+    <!-- KPI Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-gutter mb-10">
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient flex flex-col gap-2">
+        <span class="material-symbols-outlined text-secondary-container ms-filled" style="font-size:28px;">auto_stories</span>
+        <div class="font-display-lg text-3xl font-bold text-on-surface" id="kpiTotal">—</div>
+        <div class="font-label-md text-label-md text-on-surface-variant">Total Narratives</div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient flex flex-col gap-2">
+        <span class="material-symbols-outlined text-secondary-container ms-filled" style="font-size:28px;">star</span>
+        <div class="font-display-lg text-3xl font-bold text-on-surface" id="kpiRating">—</div>
+        <div class="font-label-md text-label-md text-on-surface-variant">Avg. Rating</div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient flex flex-col gap-2">
+        <span class="material-symbols-outlined text-primary ms-filled" style="font-size:28px;">record_voice_over</span>
+        <div class="font-display-lg text-3xl font-bold text-on-surface" id="kpiTopTone">—</div>
+        <div class="font-label-md text-label-md text-on-surface-variant">Top Tone</div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient flex flex-col gap-2">
+        <span class="material-symbols-outlined text-tertiary ms-filled" style="font-size:28px;">check_circle</span>
+        <div class="font-display-lg text-3xl font-bold text-on-surface" id="kpiRated">—</div>
+        <div class="font-label-md text-label-md text-on-surface-variant">Rated Stories</div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter mb-8">
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+        <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">📈 Generations (Last 30 Days)</h3>
+        <div class="h-56"><canvas id="chartPerDay"></canvas></div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+        <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">🎭 Tone Distribution</h3>
+        <div class="h-56"><canvas id="chartTone"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-8">
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+        <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">⭐ Rating Dist.</h3>
+        <div class="h-48"><canvas id="chartRatings"></canvas></div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+        <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">🗺️ Top Routes</h3>
+        <div class="h-48"><canvas id="chartRoutes"></canvas></div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+        <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">👤 Top Drivers</h3>
+        <div class="h-48"><canvas id="chartDrivers"></canvas></div>
+      </div>
+    </div>
+
+    <!-- High-Rated Table -->
+    <div class="bg-white p-6 rounded-2xl border border-outline-variant shadow-ambient">
+      <h3 class="font-headline-md text-headline-md mb-4 text-on-surface">🏆 Recent High-Rated (4–5 ★)</h3>
+      <div class="overflow-x-auto" id="highRatedTable">
+        <p class="text-on-surface-variant p-4 font-body-md">Loading…</p>
+      </div>
+    </div>
+  </main>
+</div><!-- /#view-analytics -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     VIEW: ADMIN PANEL
+══════════════════════════════════════════════════════════ -->
+<div id="view-admin" class="view">
+  <main class="max-w-container-max mx-auto px-4 md:px-margin-desktop py-12 min-h-screen">
+    <header class="mb-10">
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Admin Panel</h1>
+      <p class="font-body-md text-on-surface-variant">Manage generation data, export records, and view all narratives.</p>
+    </header>
+
+    <!-- Auth Wall -->
+    <div id="authWall" class="auth-wall">
+      <div class="auth-card">
+        <div class="text-center mb-8">
+          <div class="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center mx-auto mb-4">
+            <span class="material-symbols-outlined text-primary text-3xl">lock</span>
+          </div>
+          <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Admin Sign In</h2>
+          <p class="font-body-md text-on-surface-variant">Sign in to access the admin data viewer.</p>
+        </div>
+
+        <!-- Google Sign In -->
+        <button class="w-full flex items-center justify-center gap-3 border border-outline-variant rounded-xl py-3 px-6 font-label-md text-label-md hover:bg-surface-container transition-all mb-4" id="googleSignInBtn">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+            <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+            <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
+            <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/>
+          </svg>
+          Sign in with Google
+        </button>
+
+        <div class="flex items-center gap-4 my-5">
+          <div class="flex-1 h-px bg-outline-variant"></div>
+          <span class="text-sm text-outline">or</span>
+          <div class="flex-1 h-px bg-outline-variant"></div>
+        </div>
+
+        <!-- Email/Password -->
+        <form id="adminLoginForm" novalidate class="space-y-4">
+          <div>
+            <label class="font-label-md text-label-md text-on-surface block mb-2" for="adminEmail">Email</label>
+            <input type="email" id="adminEmail" placeholder="admin@manivtha.com" autocomplete="email" required
+                   class="w-full px-4 py-3 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white font-body-md text-on-surface">
+          </div>
+          <div>
+            <label class="font-label-md text-label-md text-on-surface block mb-2" for="adminPassword">Password</label>
+            <input type="password" id="adminPassword" placeholder="••••••••" autocomplete="current-password" required
+                   class="w-full px-4 py-3 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white font-body-md text-on-surface">
+          </div>
+          <button type="submit" id="emailSignInBtn"
+                  class="w-full bg-primary text-white py-3 rounded-xl font-label-md text-label-md hover:bg-primary-container transition-all">
+            Sign In
           </button>
+          <p class="text-center">
+            <a href="#" id="forgotPasswordLink" class="text-sm text-outline hover:text-primary transition-colors">Forgot password?</a>
+          </p>
+        </form>
+        <p id="authError" class="text-error text-sm mt-4 text-center hidden"></p>
+      </div>
+    </div>
 
-          <div class="auth-divider">or</div>
-
-          <form class="auth-form" id="adminLoginForm" novalidate>
-            <div class="input-group">
-              <label for="adminEmail">Email Address</label>
-              <input type="email" id="adminEmail" name="email" placeholder="admin@manivtha.com"
-                     autocomplete="email" required aria-required="true">
-            </div>
-            <div class="input-group">
-              <label for="adminPassword">Password</label>
-              <input type="password" id="adminPassword" name="password" placeholder="••••••••"
-                     autocomplete="current-password" required aria-required="true">
-            </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;" id="emailSignInBtn">
-              Sign In
-            </button>
-            <p style="text-align:center;margin-top:10px;">
-              <a href="#" id="forgotPasswordLink" style="font-size:13px;color:var(--text-muted);text-decoration:underline;">Forgot password?</a>
-            </p>
-          </form>
-
-          <p id="authError" style="color:var(--danger);font-size:13px;margin-top:12px;display:none;"></p>
+    <!-- Admin Content Panel -->
+    <div id="adminContent" style="display:none;">
+      <!-- Toolbar -->
+      <div class="flex flex-wrap gap-3 mb-6 items-center">
+        <div class="relative flex-1 min-w-[200px]">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style="font-size:18px;">search</span>
+          <input type="search" id="adminSearch" placeholder="Search by driver, route, title…"
+                 class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white text-sm font-body-md">
         </div>
+        <select id="adminFilterTone" class="border border-outline-variant rounded-xl px-3 py-2.5 bg-white text-sm font-body-md text-on-surface outline-none focus:border-primary">
+          <option value="">All Tones</option>
+          <option value="Adventurous">⚡ Adventurous</option>
+          <option value="Poetic">🌸 Poetic</option>
+          <option value="Informative">📖 Informative</option>
+          <option value="Humorous">😄 Humorous</option>
+        </select>
+        <select id="adminFilterRating" class="border border-outline-variant rounded-xl px-3 py-2.5 bg-white text-sm font-body-md text-on-surface outline-none focus:border-primary">
+          <option value="">All Ratings</option>
+          <option value="5">★★★★★ 5 Stars</option>
+          <option value="4">★★★★ 4 Stars</option>
+          <option value="3">★★★ 3 Stars</option>
+          <option value="2">★★ 2 Stars</option>
+          <option value="1">★ 1 Star</option>
+        </select>
+        <button id="exportCsvBtn"
+                class="flex items-center gap-2 border border-outline-variant rounded-xl px-4 py-2.5 bg-white text-sm font-label-md text-label-md hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Export CSV
+        </button>
+        <span id="adminRecordCount" class="text-sm text-on-surface-variant font-label-md ml-auto"></span>
       </div>
 
-      <!-- Admin Data Panel (shown after auth) -->
-      <div class="admin-content" id="adminContent" style="display:none">
-
-        <!-- Toolbar -->
-        <div class="admin-toolbar">
-          <div class="search-input-wrapper">
-            <input type="search" class="search-input" id="adminSearch"
-                   placeholder="Search by driver, route, title..."
-                   aria-label="Search records">
-          </div>
-
-          <select id="adminFilterTone" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);padding:10px 14px;border-radius:var(--radius-md);font-family:inherit;font-size:13px;outline:none;cursor:pointer;" aria-label="Filter by tone">
-            <option value="">All Tones</option>
-            <option value="Adventurous">⚡ Adventurous</option>
-            <option value="Poetic">🌸 Poetic</option>
-            <option value="Informative">📖 Informative</option>
-            <option value="Humorous">😄 Humorous</option>
-          </select>
-
-          <select id="adminFilterRating" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);padding:10px 14px;border-radius:var(--radius-md);font-family:inherit;font-size:13px;outline:none;cursor:pointer;" aria-label="Filter by rating">
-            <option value="">All Ratings</option>
-            <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
-            <option value="4">⭐⭐⭐⭐ 4 Stars</option>
-            <option value="3">⭐⭐⭐ 3 Stars</option>
-            <option value="2">⭐⭐ 2 Stars</option>
-            <option value="1">⭐ 1 Star</option>
-          </select>
-
-          <button class="btn btn-secondary btn-sm" id="exportCsvBtn" aria-label="Export all data as CSV">
-            📥 Export CSV
-          </button>
-
-          <span id="adminRecordCount" style="font-size:13px;color:var(--text-muted);margin-left:auto;"></span>
-        </div>
-
-        <!-- Data Table -->
-        <div class="data-table-wrapper">
-          <table class="data-table" id="adminTable" aria-label="Generations data table">
+      <!-- Data Table -->
+      <div class="bg-white rounded-2xl border border-outline-variant shadow-ambient overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="data-table" id="adminTable" aria-label="Generations data">
             <thead>
               <tr>
                 <th>ID</th>
@@ -424,38 +1084,44 @@
               </tr>
             </thead>
             <tbody id="adminTableBody">
-              <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">Loading records...</td></tr>
+              <tr><td colspan="10" class="text-center py-10 text-on-surface-variant">Loading records…</td></tr>
             </tbody>
           </table>
         </div>
-
-        <div class="pagination" id="adminPagination"></div>
       </div>
-    </div><!-- /#view-admin -->
-
+      <div class="flex justify-center gap-2 mt-6" id="adminPagination"></div>
+    </div>
   </main>
-</div>
+</div><!-- /#view-admin -->
 
-<!-- History / Admin Detail Modal -->
-<div class="modal-overlay" id="detailModal" role="dialog" aria-modal="true" aria-label="Narrative detail">
-  <div class="modal" id="detailModalContent">
-    <button class="modal-close" id="modalClose" aria-label="Close modal">✕</button>
+
+<!-- ══════════════════════════════════════════════════════════
+     DETAIL MODAL  (history + admin narrative viewer)
+══════════════════════════════════════════════════════════ -->
+<div id="detailModal" role="dialog" aria-modal="true" aria-label="Narrative detail">
+  <div id="detailModalBox">
+    <button id="modalClose" class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-all text-on-surface" aria-label="Close">
+      <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+    </button>
     <div id="modalBody"></div>
   </div>
 </div>
 
-<!-- Toast Notification -->
-<div class="toast" id="toast" role="status" aria-live="assertive"></div>
+<!-- Toast -->
+<div id="toast" role="status" aria-live="assertive"></div>
 
-<!-- ── JavaScript Modules ──────────────────────────────────── -->
-<!-- 1. Firebase config (must be first — initializes firebaseApp/Auth/Db/Storage) -->
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT MODULES  (load order matters)
+══════════════════════════════════════════════════════════ -->
+<!-- 1. Firebase config -->
 <script src="js/config.js"></script>
 <!-- 2. Firebase feature modules -->
 <script src="js/firebase/auth.js"></script>
 <script src="js/firebase/firestore.js"></script>
 <script src="js/firebase/storage.js"></script>
 <script src="js/firebase/index.js"></script>
-<!-- 3. App-level service layer -->
+<!-- 3. App service layer -->
 <script src="js/services/firebaseService.js"></script>
 <!-- 4. App UI modules -->
 <script src="js/auth.js"></script>
@@ -463,6 +1129,7 @@
 <script src="js/history.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/tts.js"></script>
 <script src="js/app.js"></script>
 
 </body>

@@ -1,254 +1,374 @@
 /**
- * generate.js — Generate View Logic
- * Handles form submission, AI response display with typing effect,
- * copy/download/regenerate actions, and star rating submission.
+ * generate.js — Narrative Generation Wizard Logic
+ * ────────────────────────────────────────────────
+ * Controls the 3-step narrative creation wizard (Stitch: create_new_narrative).
+ * Wires the form → backend Gemini API → step-3 narrative display → TTS.
+ * Also handles tone chip selection, star rating, copy, download, share.
  */
 
-// ── State ─────────────────────────────────────────────────
-let currentGenerationId = null;
-let lastFormData = null;
-let selectedRating = 0;
-let ratingSubmitted = false;
+// ── Module State ─────────────────────────────────────────────
+let currentStep       = 1;
+let currentNarrativeId = null;   // SQLite row ID after generation
+let selectedRating    = 0;
+let lastFormData      = null;
 
-// ── Shared Utilities ──────────────────────────────────────
-
-/** Show toast notification */
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('toast');
-  toast.className = `toast ${type} show`;
-  toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> ${message}`;
-  setTimeout(() => { toast.classList.remove('show'); }, 3500);
-}
-
-/** Convert markdown-like AI response to HTML */
-function markdownToHtml(text) {
-  return text
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\n\n+/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-    .replace(/<p><(h[123])>/g, '<$1>')
-    .replace(/<\/(h[123])><\/p>/g, '</$1>');
-}
-
-/** Type-writer animation effect for the narrative output */
-async function typewriterDisplay(html, container) {
-  // Parse HTML to plain text segments, then type them in
-  const div = document.createElement('div');
-  div.className = 'narrative-body';
-  div.innerHTML = html;
-  container.innerHTML = '';
-
-  // Add cursor
-  const cursor = document.createElement('span');
-  cursor.className = 'typing-cursor';
-  container.appendChild(cursor);
-
-  // Collect text nodes recursively
-  const allText = div.innerHTML;
-  let i = 0;
-  const chunkSize = 4; // characters per frame
-
-  return new Promise((resolve) => {
-    function typeChunk() {
-      if (i >= allText.length) {
-        cursor.remove();
-        container.innerHTML = allText;
-        container.firstElementChild?.classList.add('narrative-body');
-        resolve();
-        return;
-      }
-      i = Math.min(i + chunkSize, allText.length);
-      // Show partial content + cursor
-      const partial = document.createElement('div');
-      partial.className = 'narrative-body';
-      partial.innerHTML = allText.slice(0, i);
-      container.innerHTML = '';
-      container.appendChild(partial);
-      container.appendChild(cursor);
-      requestAnimationFrame(typeChunk);
-    }
-    requestAnimationFrame(typeChunk);
-  });
-}
-
-// ── Form Submission ───────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const form         = document.getElementById('narrativeForm');
-  const generateBtn  = document.getElementById('generateBtn');
-  const btnText      = generateBtn.querySelector('.btn-text');
-  const btnLoader    = document.getElementById('generateLoader');
-  const outputSec    = document.getElementById('outputSection');
-  const outputContent = document.getElementById('outputContent');
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const driverName  = document.getElementById('driverName').value.trim();
-    const route       = document.getElementById('route').value.trim();
-
-    if (!driverName || !route) {
-      showToast('Driver name and route are required.', 'error');
+// ── Step Navigation ───────────────────────────────────────────
+window.goToStep = function (step) {
+  // Validate step 1 before proceeding to step 2
+  if (step === 2) {
+    const driver = document.getElementById('driverName')?.value.trim();
+    const route  = document.getElementById('route')?.value.trim();
+    if (!driver || !route) {
+      showToast('Please fill in Driver Name and Route to continue.', 'error');
       return;
     }
+  }
 
-    // Collect form data
-    lastFormData = {
-      driverName,
-      route,
-      landmarks:   document.getElementById('landmarks').value.trim(),
-      highlights:  document.getElementById('highlights').value.trim(),
-      tripDate:    document.getElementById('tripDate').value,
-      vehicleType: document.getElementById('vehicleType').value,
-      tone:        document.getElementById('tone').value,
-    };
+  // Animate out current step
+  const current = document.getElementById(`step-${currentStep}`);
+  if (current) {
+    current.style.opacity = '0';
+    setTimeout(() => {
+      current.classList.add('hidden');
+      showStep(step);
+    }, 200);
+  } else {
+    showStep(step);
+  }
+};
 
-    await generateNarrative(lastFormData, generateBtn, btnText, btnLoader, outputSec, outputContent);
-  });
+function showStep(step) {
+  currentStep = step;
 
-  // Regenerate button
-  document.getElementById('regenerateBtn').addEventListener('click', async () => {
-    if (!lastFormData) return;
-    const generateBtn  = document.getElementById('generateBtn');
-    const btnText      = generateBtn.querySelector('.btn-text');
-    const btnLoader    = document.getElementById('generateLoader');
-    const outputSec    = document.getElementById('outputSection');
-    const outputContent = document.getElementById('outputContent');
-    await generateNarrative(lastFormData, generateBtn, btnText, btnLoader, outputSec, outputContent);
-  });
+  const el = document.getElementById(`step-${step}`);
+  if (!el) return;
+  el.classList.remove('hidden');
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
 
-  // Copy button
-  document.getElementById('copyBtn').addEventListener('click', () => {
-    const text = document.getElementById('outputContent').innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      showToast('Narrative copied to clipboard!', 'success');
+  // Update progress bar
+  const pct = ((step - 1) / 2) * 100;
+  const bar = document.getElementById('progress-bar');
+  if (bar) bar.style.width = `${pct}%`;
+
+  // Update dots
+  for (let i = 1; i <= 3; i++) {
+    const dot   = document.getElementById(`step-dot-${i}`);
+    const label = document.getElementById(`step-label-${i}`);
+    if (!dot || !label) continue;
+
+    dot.className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all';
+
+    if (i < step) {
+      dot.className += ' bg-primary text-white';
+      dot.innerHTML  = '<span class="material-symbols-outlined" style="font-size:18px;">check</span>';
+      label.className = 'font-label-md text-label-md text-primary';
+    } else if (i === step) {
+      dot.className += ' bg-primary text-white';
+      dot.textContent = i;
+      label.className = 'font-label-md text-label-md text-primary';
+    } else {
+      dot.className += ' bg-surface-container-high text-on-surface-variant';
+      dot.textContent = i;
+      label.className = 'font-label-md text-label-md text-on-surface-variant';
+    }
+  }
+}
+
+// ── Tone Chips ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tone-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.tone-chip').forEach(c => {
+        c.className = 'tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-surface-container text-on-surface border-transparent hover:border-primary';
+      });
+      chip.className = 'tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-primary-fixed text-on-primary-fixed border-primary';
+      document.getElementById('tone').value = chip.dataset.tone;
     });
   });
 
-  // Download button
-  document.getElementById('downloadBtn').addEventListener('click', () => {
-    const text = document.getElementById('outputContent').innerText;
-    const filename = `manivtha_narrative_${new Date().toISOString().slice(0, 10)}.txt`;
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-    showToast('Downloaded successfully!', 'success');
-  });
-
-  // Star rating
-  initStarRating();
+  // Pre-fill today's date
+  const dateInput = document.getElementById('tripDate');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
 });
 
-async function generateNarrative(data, btn, btnText, btnLoader, outputSec, outputContent) {
-  // UI: loading state
-  btn.disabled = true;
-  btnText.textContent = 'Generating…';
-  btnLoader.style.display = 'flex';
-  outputSec.style.display = 'none';
-  resetRating();
-  ratingSubmitted = false;
-  currentGenerationId = null;
+// ── Generate Narrative ────────────────────────────────────────
+window.handleGenerate = async function (overrideTone = null) {
+  const driverName  = document.getElementById('driverName')?.value.trim();
+  const route       = document.getElementById('route')?.value.trim();
+  const tone        = overrideTone || document.getElementById('tone')?.value || 'Adventurous';
+  const vehicleType = document.getElementById('vehicleType')?.value || 'Sedan';
+  const tripDate    = document.getElementById('tripDate')?.value || '';
+  const landmarks   = document.getElementById('landmarks')?.value.trim() || '';
+  const highlights  = document.getElementById('highlights')?.value.trim() || '';
+
+  if (!driverName || !route) {
+    showToast('Please fill in Driver Name and Route.', 'error');
+    goToStep(1);
+    return;
+  }
+
+  lastFormData = { driverName, route, tone, vehicleType, tripDate, landmarks, highlights };
+
+  // Show loading overlay
+  const loading = document.getElementById('loading-state');
+  const btn     = document.getElementById('generateBtn');
+  const btnText = document.getElementById('generateBtnText');
+  const btnIcon = document.getElementById('generateBtnIcon');
+  const loader  = document.getElementById('generateLoader');
+
+  if (loading) { loading.classList.remove('hidden'); loading.classList.add('flex'); }
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Generating…';
+  if (btnIcon) btnIcon.classList.add('hidden');
+  if (loader)  loader.classList.remove('hidden');
+
+  console.log('🚀 Generating narrative:', { driverName, route, tone, vehicleType });
 
   try {
-    const res = await fetch(`${API_BASE}/generate`, {
-      method: 'POST',
+    const res  = await fetch(`${API_BASE}/generate`, {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body:    JSON.stringify({ driverName, route, tone, vehicleType, tripDate, landmarks, highlights }),
     });
 
     const json = await res.json();
 
     if (!res.ok) {
-      throw new Error(json.error || 'Generation failed');
+      throw new Error(json.error || `Server error ${res.status}`);
     }
 
-    currentGenerationId = json.id;
+    console.log('✅ Narrative generated:', json.id, json.title);
 
-    // Show output section
-    outputSec.style.display = 'block';
-    outputSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    currentNarrativeId = json.id;
 
-    // Typing effect
-    const html = markdownToHtml(json.narrative);
-    await typewriterDisplay(html, outputContent);
+    // Render to step 3
+    renderNarrative(json);
 
-    showToast('Narrative generated successfully! ✨', 'success');
+    // Go to step 3
+    goToStep(3);
 
-  } catch (err) {
-    showToast(`Error: ${err.message}`, 'error');
-    console.error(err);
+    // Load into TTS engine (does NOT auto-play)
+    const narrativeText = json.narrative || json.body || '';
+    if (window.TTS) {
+      window.TTS.load(narrativeText);
+      showToast('✨ Narrative ready! Press ▶ to listen.', 'success', 4000);
+    }
+
+    // Firestore backup (non-blocking)
+    if (window.AppService) {
+      AppService.generateNarrative(lastFormData).catch(e =>
+        console.warn('Firestore backup error:', e)
+      );
+    }
+
+  } catch (e) {
+    console.error('Generate error:', e);
+    showToast(`Generation failed: ${e.message}`, 'error', 5000);
   } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Generate Narrative';
-    btnLoader.style.display = 'none';
+    if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex'); }
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = 'Generate Narrative';
+    if (btnIcon) btnIcon.classList.remove('hidden');
+    if (loader)  loader.classList.add('hidden');
   }
+};
+
+// ── Render Narrative to Step 3 ────────────────────────────────
+function renderNarrative(json) {
+  const output = document.getElementById('narrativeOutput');
+  if (!output) return;
+
+  const text = json.narrative || json.body || json.content || '';
+  if (!text) {
+    output.innerHTML = '<p class="text-error">No narrative content was returned.</p>';
+    return;
+  }
+
+  // Convert markdown-ish text to HTML
+  const html = text.split('\n').map(line => {
+    if (line.startsWith('## ')) return `<h2 class="font-headline-md text-headline-md text-primary mt-4 mb-2">${escHtml(line.replace('## ', ''))}</h2>`;
+    if (line.startsWith('# '))  return `<h1 class="font-headline-md text-headline-md text-primary mt-4 mb-2">${escHtml(line.replace('# ', ''))}</h1>`;
+    if (line.startsWith('**') && line.endsWith('**')) return `<p class="font-bold mb-2">${escHtml(line.replace(/\*\*/g, ''))}</p>`;
+    return line.trim() ? `<p class="mb-3 leading-relaxed text-on-surface font-body-md">${escHtml(line)}</p>` : '';
+  }).join('');
+
+  output.innerHTML = `<h1 class="font-headline-md text-headline-md text-primary mb-4">${escHtml(json.title || json.route || 'Trip Narrative')}</h1>${html}`;
+
+  // Story elements sidebar
+  const fd = lastFormData || {};
+  const elemRoute  = document.getElementById('elemRoute');
+  const elemTone   = document.getElementById('elemTone');
+  const elemDriver = document.getElementById('elemDriver');
+  if (elemRoute)  elemRoute.textContent  = fd.route   || '—';
+  if (elemTone)   elemTone.textContent   = fd.tone    || '—';
+  if (elemDriver) elemDriver.textContent = fd.driverName || '—';
+
+  // Show rating section
+  const ratingSection = document.getElementById('ratingSection');
+  if (ratingSection) ratingSection.style.display = 'block';
 }
 
-// ── Star Rating ────────────────────────────────────────────
-function initStarRating() {
-  const stars = document.querySelectorAll('.star');
-  const submitBtn = document.getElementById('submitRatingBtn');
+// ── Regenerate with Different Tone ────────────────────────────
+window.handleRegenerate = async function (tone) {
+  if (!lastFormData) { showToast('Please generate a narrative first.', 'info'); return; }
+  await handleGenerate(tone);
+};
 
-  stars.forEach((star) => {
-    star.addEventListener('mouseover', () => highlightStars(Number(star.dataset.value)));
-    star.addEventListener('mouseleave', () => highlightStars(selectedRating));
-    star.addEventListener('click', () => {
-      selectedRating = Number(star.dataset.value);
-      highlightStars(selectedRating);
-      submitBtn.style.display = 'inline-flex';
-    });
-    // Keyboard support
-    star.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        selectedRating = Number(star.dataset.value);
-        highlightStars(selectedRating);
-        submitBtn.style.display = 'inline-flex';
-      }
-    });
+// ── Reset Wizard ──────────────────────────────────────────────
+window.resetWizard = function () {
+  currentNarrativeId = null;
+  selectedRating     = 0;
+  lastFormData       = null;
+
+  // Clear form
+  ['driverName','route','landmarks','highlights','ratingComment'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('tripDate')?.setAttribute('value', new Date().toISOString().split('T')[0]);
+  document.getElementById('tone').value = 'Adventurous';
+
+  // Reset tone chips
+  document.querySelectorAll('.tone-chip').forEach((c, i) => {
+    c.className = i === 0
+      ? 'tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-primary-fixed text-on-primary-fixed border-primary'
+      : 'tone-chip px-6 py-2 rounded-full border font-body-md transition-all bg-surface-container text-on-surface border-transparent hover:border-primary';
   });
 
-  submitBtn.addEventListener('click', async () => {
-    if (!currentGenerationId || !selectedRating) return;
-    if (ratingSubmitted) { showToast('Already rated!', 'info'); return; }
+  // Reset rating stars
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('active','hovered'));
 
-    const comment = document.getElementById('ratingComment').value.trim();
+  // Stop TTS
+  if (window.TTS) window.TTS.stop();
 
-    try {
-      const res = await fetch(`${API_BASE}/feedback/${currentGenerationId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: selectedRating, comment }),
-      });
-      if (!res.ok) throw new Error('Rating submission failed');
-      ratingSubmitted = true;
-      submitBtn.textContent = '✅ Rating Saved!';
-      submitBtn.disabled = true;
-      showToast(`Rated ${selectedRating} star${selectedRating > 1 ? 's' : ''}. Thank you!`, 'success');
-    } catch (err) {
-      showToast('Failed to save rating. Try again.', 'error');
+  // Go to step 1
+  // Force-show step 1, hide others
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(`step-${i}`);
+    if (!el) continue;
+    if (i === 1) {
+      el.classList.remove('hidden');
+      el.style.opacity = '1';
+    } else {
+      el.classList.add('hidden');
+      el.style.opacity = '0';
     }
-  });
-}
+  }
+  currentStep = 1;
+  const bar = document.getElementById('progress-bar');
+  if (bar) bar.style.width = '0%';
 
-function highlightStars(count) {
-  document.querySelectorAll('.star').forEach((s) => {
-    s.classList.toggle('active', Number(s.dataset.value) <= count);
-  });
-}
+  // Reset dots
+  for (let i = 1; i <= 3; i++) {
+    const dot   = document.getElementById(`step-dot-${i}`);
+    const label = document.getElementById(`step-label-${i}`);
+    if (!dot || !label) continue;
+    dot.className = i === 1
+      ? 'w-10 h-10 rounded-full flex items-center justify-center font-bold bg-primary text-white'
+      : 'w-10 h-10 rounded-full flex items-center justify-center font-bold bg-surface-container-high text-on-surface-variant';
+    dot.textContent = i;
+    label.className = i === 1
+      ? 'font-label-md text-label-md text-primary'
+      : 'font-label-md text-label-md text-on-surface-variant';
+  }
+};
 
-function resetRating() {
-  selectedRating = 0;
-  highlightStars(0);
-  document.getElementById('ratingComment').value = '';
+// ── Narrative Actions: Copy / Download / Share ────────────────
+window.copyNarrative = async function () {
+  const text = document.getElementById('narrativeOutput')?.textContent || '';
+  if (!text.trim()) { showToast('Nothing to copy.', 'info'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Narrative copied to clipboard!', 'success');
+  } catch {
+    showToast('Copy not supported. Please select and copy manually.', 'error');
+  }
+};
+
+window.downloadNarrative = function () {
+  const text  = document.getElementById('narrativeOutput')?.textContent || '';
+  const title = (lastFormData?.route || 'narrative').replace(/[^a-z0-9]/gi, '_');
+  if (!text.trim()) { showToast('Nothing to download.', 'info'); return; }
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: `${title}.txt` });
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Narrative downloaded!', 'success');
+};
+
+window.shareNarrative = async function () {
+  const text  = document.getElementById('narrativeOutput')?.textContent || '';
+  const title = lastFormData?.route || 'Trip Narrative';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text: text.slice(0, 300) + '…' });
+    } catch {}
+  } else {
+    await copyNarrative();
+    showToast('Link copied — paste to share!', 'success');
+  }
+};
+
+// ── Star Rating ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const stars = document.querySelectorAll('.star');
+
+  stars.forEach(star => {
+    const val = parseInt(star.dataset.value);
+
+    star.addEventListener('mouseover', () => {
+      stars.forEach(s => {
+        s.classList.toggle('hovered', parseInt(s.dataset.value) <= val);
+      });
+    });
+    star.addEventListener('mouseout', () => {
+      stars.forEach(s => s.classList.remove('hovered'));
+    });
+    star.addEventListener('click', () => {
+      selectedRating = val;
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.value) <= val);
+      });
+      const submitBtn = document.getElementById('submitRatingBtn');
+      if (submitBtn) submitBtn.style.display = 'inline-block';
+    });
+    star.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { star.click(); }
+    });
+  });
+});
+
+window.submitRating = async function () {
+  if (!selectedRating) { showToast('Please select a rating.', 'info'); return; }
+  if (!currentNarrativeId) { showToast('No narrative to rate.', 'info'); return; }
+
+  const comment = document.getElementById('ratingComment')?.value.trim() || '';
   const btn = document.getElementById('submitRatingBtn');
-  btn.style.display = 'none';
-  btn.disabled = false;
-  btn.textContent = 'Submit Rating';
-}
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+  try {
+    const res = await fetch(`${API_BASE}/feedback/${currentNarrativeId}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ rating: selectedRating, comment }),
+    });
+    if (!res.ok) {
+      const j = await res.json();
+      throw new Error(j.error || 'Rating failed');
+    }
+    showToast(`Thank you! Rated ${selectedRating} ★`, 'success');
+    if (btn) { btn.textContent = '✓ Rated'; btn.disabled = true; }
+
+    // Sync to Firestore
+    if (window.AppService && window.AppService.submitRating) {
+      AppService.submitRating(currentNarrativeId, selectedRating, comment);
+    }
+  } catch (e) {
+    showToast(`Rating error: ${e.message}`, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Rating'; }
+  }
+};
