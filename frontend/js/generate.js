@@ -17,9 +17,9 @@ window.goToStep = function (step) {
   // Validate step 1 before proceeding to step 2
   if (step === 2) {
     const driver = document.getElementById('driverName')?.value.trim();
-    const route  = document.getElementById('route')?.value.trim();
-    if (!driver || !route) {
-      showToast('Please fill in Driver Name and Route to continue.', 'error');
+    const destination  = document.getElementById('destination')?.value.trim();
+    if (!driver || !destination) {
+      showToast('Please fill in Driver Name and Destination to continue.', 'error');
       return;
     }
   }
@@ -93,23 +93,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── Title Suggestion ──────────────────────────────────────────
+window.suggestTitle = async function() {
+  const dest = document.getElementById('destination')?.value.trim();
+  if (!dest) {
+    showToast('Please enter a Destination first.', 'info');
+    return;
+  }
+  
+  const start = document.getElementById('startingLocation')?.value.trim();
+  const btnText = document.getElementById('suggestTitleText');
+  const loader = document.getElementById('suggestTitleLoader');
+  
+  if (btnText) btnText.classList.add('hidden');
+  if (loader) loader.classList.remove('hidden');
+
+  try {
+    const fetchFn = window.authFetch || fetch;
+    const res = await fetchFn(`${API_BASE}/suggest-title/title`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ destination: dest, startingLocation: start }),
+    });
+    
+    if (!res.ok) throw new Error('Failed to suggest title');
+    const data = await res.json();
+    if (data.title) {
+      document.getElementById('tripTitle').value = data.title;
+      showToast('Title suggested!', 'success');
+    }
+  } catch(e) {
+    console.error(e);
+    showToast('Could not suggest title at this time.', 'error');
+  } finally {
+    if (btnText) btnText.classList.remove('hidden');
+    if (loader) loader.classList.add('hidden');
+  }
+};
+
 // ── Generate Narrative ────────────────────────────────────────
 window.handleGenerate = async function (overrideTone = null) {
   const driverName  = document.getElementById('driverName')?.value.trim();
-  const route       = document.getElementById('route')?.value.trim();
-  const tone        = overrideTone || document.getElementById('tone')?.value || 'Adventurous';
+  const startingLocation = document.getElementById('startingLocation')?.value.trim();
+  const destination = document.getElementById('destination')?.value.trim();
+  const titleField  = document.getElementById('tripTitle')?.value.trim();
+  const mood        = overrideTone || document.getElementById('mood')?.value || 'adventurous';
+  const style       = document.getElementById('style')?.value || 'Adventure';
   const vehicleType = document.getElementById('vehicleType')?.value || 'Sedan';
   const tripDate    = document.getElementById('tripDate')?.value || '';
   const landmarks   = document.getElementById('landmarks')?.value.trim() || '';
   const highlights  = document.getElementById('highlights')?.value.trim() || '';
 
-  if (!driverName || !route) {
-    showToast('Please fill in Driver Name and Route.', 'error');
+  if (!driverName || !destination) {
+    showToast('Please fill in Driver Name and Destination.', 'error');
     goToStep(1);
     return;
   }
 
-  lastFormData = { driverName, route, tone, vehicleType, tripDate, landmarks, highlights };
+  const route = startingLocation ? `${startingLocation} to ${destination}` : destination;
+  lastFormData = { driverName, route, startingLocation, destination, title: titleField, mood, style, vehicleType, tripDate, landmarks, highlights };
 
   // Show loading overlay
   const loading = document.getElementById('loading-state');
@@ -124,7 +166,22 @@ window.handleGenerate = async function (overrideTone = null) {
   if (btnIcon) btnIcon.classList.add('hidden');
   if (loader)  loader.classList.remove('hidden');
 
-  console.log('🚀 Generating narrative:', { driverName, route, tone, vehicleType });
+  // ── Immediate progress animation (starts within ~100ms) ────────────
+  // Cycles through status messages so user sees activity immediately
+  const progressSteps = [
+    'Contacting AI…',
+    'Crafting your story…',
+    'Weaving the narrative…',
+    'Finalizing your journey…',
+  ];
+  let progressIdx = 0;
+  const progressEl = document.getElementById('generateBtnText') || btnText;
+  const progressInterval = setInterval(() => {
+    progressIdx = (progressIdx + 1) % progressSteps.length;
+    if (progressEl) progressEl.textContent = progressSteps[progressIdx];
+  }, 1800);
+
+  console.log('🚀 Generating narrative:', { driverName, destination, mood, style });
 
   try {
     // Use authFetch — sends Firebase ID token so backend can associate userId
@@ -132,7 +189,7 @@ window.handleGenerate = async function (overrideTone = null) {
     const res = await fetchFn(`${API_BASE}/generate`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ driverName, route, tone, vehicleType, tripDate, landmarks, highlights }),
+      body:    JSON.stringify({ driverName, startingLocation, destination, title: titleField, mood, style, vehicleType, tripDate, landmarks, highlights }),
     });
 
     const json = await res.json();
@@ -148,13 +205,19 @@ window.handleGenerate = async function (overrideTone = null) {
     // Save to Firestore (primary store — triggers real-time history update)
     if (window.FirestoreService && window.currentUser) {
       const firestorePayload = {
+        // Trip details from form
         ...lastFormData,
-        title:       json.title,
-        narrative:   json.narrative,
-        userId:      window.currentUser.uid,
-        sqliteId:    json.id,
-        wordCount:   json.wordCount,
-        charCount:   json.charCount,
+        // Override/add generated content
+        title:          json.title,
+        narrative:      json.narrative,
+        summary:        json.summary        || null,
+        socialCaption:  json.socialCaption  || null,
+        // User + linking
+        userId:         window.currentUser.uid,
+        sqliteId:       json.id,
+        // Quality metrics
+        wordCount:      json.wordCount,
+        charCount:      json.charCount,
       };
       FirestoreService.saveNarrative(firestorePayload).then(({ id: fsId, error: fsErr }) => {
         if (fsErr) {
@@ -198,6 +261,7 @@ window.handleGenerate = async function (overrideTone = null) {
     console.error('Generate error:', e);
     showToast(`Generation failed: ${e.message}`, 'error', 5000);
   } finally {
+    clearInterval(progressInterval);
     if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex'); }
     if (btn) btn.disabled = false;
     if (btnText) btnText.textContent = 'Generate Narrative';
@@ -209,10 +273,16 @@ window.handleGenerate = async function (overrideTone = null) {
 // ── Render Narrative to Step 3 ────────────────────────────────
 function renderNarrative(json) {
   const output = document.getElementById('narrativeOutput');
+  const summaryEl = document.getElementById('narrativeSummary');
+  const captionEl = document.getElementById('socialCaption');
+  
   if (!output) return;
 
   const title = json.title || json.route || 'Trip Narrative';
   let   text  = json.narrative || json.body || json.content || '';
+  
+  if (summaryEl) summaryEl.textContent = json.summary || 'Summary unavailable.';
+  if (captionEl) captionEl.textContent = json.socialCaption || 'Caption unavailable.';
 
   if (!text) {
     output.innerHTML = '<p class="text-error">No narrative content was returned.</p>';
@@ -247,10 +317,10 @@ function renderNarrative(json) {
     `<h2 class="font-headline-md text-headline-md text-primary mb-5 pb-4 border-b border-outline-variant">${escHtml(title)}</h2>` +
     (html || '<p class="text-on-surface-variant">No content generated.</p>');
 
-  // ── Show quality badge ─────────────────────────────────────
+  // ── Show quality badge ─────────────────────────────────
   const qualityBadge = document.getElementById('narrativeQuality');
   if (qualityBadge) {
-    const ok = words >= 150 && chars >= 3000;
+    const ok = words >= 200 && chars >= 3000;  // must match backend MIN_WORDS / MIN_CHARS
     qualityBadge.textContent = `${words} words · ${chars.toLocaleString()} chars`;
     qualityBadge.className   = ok
       ? 'text-xs font-label-md px-3 py-1 rounded-full bg-tertiary-fixed/40 text-tertiary'
@@ -264,7 +334,7 @@ function renderNarrative(json) {
   const elemTone   = document.getElementById('elemTone');
   const elemDriver = document.getElementById('elemDriver');
   if (elemRoute)  elemRoute.textContent  = fd.route      || json.route      || '—';
-  if (elemTone)   elemTone.textContent   = fd.tone       || json.tone       || '—';
+  if (elemTone)   elemTone.textContent   = fd.mood       || json.tone       || '—';
   if (elemDriver) elemDriver.textContent = fd.driverName || json.driverName || '—';
 
   // ── Show rating section ────────────────────────────────────
@@ -285,12 +355,13 @@ window.resetWizard = function () {
   lastFormData       = null;
 
   // Clear form
-  ['driverName','route','landmarks','highlights','ratingComment'].forEach(id => {
+  ['driverName','startingLocation','destination','tripTitle','landmarks','highlights','ratingComment'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('tripDate')?.setAttribute('value', new Date().toISOString().split('T')[0]);
-  document.getElementById('tone').value = 'Adventurous';
+  if (document.getElementById('mood')) document.getElementById('mood').value = 'adventurous';
+  if (document.getElementById('style')) document.getElementById('style').value = 'Adventure';
 
   // Reset tone chips
   document.querySelectorAll('.tone-chip').forEach((c, i) => {
@@ -372,6 +443,17 @@ window.shareNarrative = async function () {
   } else {
     await copyNarrative();
     showToast('Link copied — paste to share!', 'success');
+  }
+};
+
+window.copySocialCaption = async function() {
+  const text = document.getElementById('socialCaption')?.textContent || '';
+  if (!text.trim() || text.includes('unavailable')) { showToast('Nothing to copy.', 'info'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Caption copied!', 'success');
+  } catch {
+    showToast('Copy not supported.', 'error');
   }
 };
 

@@ -12,9 +12,9 @@ try {
 } catch (_) {}
 
 // ── Minimum quality thresholds ────────────────────────────────
-const MIN_WORDS   = 150;
-const MIN_CHARS   = 3000;
-const MAX_RETRIES = 2;
+const MIN_WORDS   = 200;   // ≥ 200 words required
+const MIN_CHARS   = 3000;  // ≥ 3,000 characters required
+const MAX_RETRIES = 3;     // up to 4 total attempts
 
 // ── Helpers ───────────────────────────────────────────────────
 function wordCount(text) {
@@ -40,28 +40,27 @@ async function extractUserId(req) {
 }
 
 /**
- * Parse AI response → { title, narrative }
- * Prompt instructs: Line 1 = plain title, Line 2 = blank, Lines 3+ = body.
- * Also handles legacy "# Title" format.
+ * Parse AI response JSON
  */
 function parseResponse(raw, fallbackRoute) {
-  const lines = raw.split('\n');
-  let titleLine = '';
-  let bodyStart = 0;
-
-  if (lines[0].startsWith('#')) {
-    titleLine = lines[0].replace(/^#+\s*/, '').trim();
-    bodyStart = lines[1] === '' ? 2 : 1;
-  } else {
-    titleLine = lines[0].trim();
-    bodyStart = lines[1] === '' ? 2 : 1;
+  let parsed;
+  try {
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    const jsonString = jsonMatch ? jsonMatch[1] : raw;
+    parsed = JSON.parse(jsonString);
+  } catch (e) {
+    console.error('[generate] Failed to parse JSON response. Falling back to plain text extraction.', e);
+    return { 
+      title: `${fallbackRoute} — A Journey to Remember`, 
+      summary: '',
+      socialCaption: '',
+      narrative: raw.trim() 
+    };
   }
 
-  const title = titleLine || `${fallbackRoute} — A Journey to Remember`;
+  const title = parsed.title || `${fallbackRoute} — A Journey to Remember`;
+  let body = (parsed.narrative || '').trim();
 
-  let body = lines.slice(bodyStart).join('\n').trim();
-
-  // Remove any accidental title repetition in the body
   const esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   body = body
     .replace(new RegExp(`^#+\\s*${esc}\\s*$`, 'gmi'), '')
@@ -69,10 +68,14 @@ function parseResponse(raw, fallbackRoute) {
     .replace(new RegExp(`^${esc}\\s*$`, 'gmi'), '')
     .trim();
 
-  // Convert ## subheadings to plain text
   body = body.replace(/^##\s+(.+)$/gm, '\n$1\n');
 
-  return { title, narrative: body };
+  return { 
+    title, 
+    summary: parsed.summary || '',
+    socialCaption: parsed.socialCaption || '',
+    narrative: body 
+  };
 }
 
 function validateNarrative(text) {
@@ -87,10 +90,12 @@ function validateNarrative(text) {
  * Optionally accepts Authorization: Bearer <idToken> to associate with a user.
  */
 router.post('/', async (req, res) => {
-  const { driverName, route, landmarks, highlights, tripDate, vehicleType, tone } = req.body;
+  const { driverName, route, startingLocation, destination, title: requestedTitle, mood, style, tone, landmarks, highlights, tripDate, vehicleType } = req.body;
 
-  if (!driverName || !route) {
-    return res.status(400).json({ error: 'driverName and route are required fields.' });
+  const finalRoute = (startingLocation && destination) ? `${startingLocation} to ${destination}` : route;
+
+  if (!driverName || !finalRoute) {
+    return res.status(400).json({ error: 'driverName and route (or startingLocation/destination) are required fields.' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -100,19 +105,21 @@ router.post('/', async (req, res) => {
 
   // Extract userId non-blocking
   const userId = await extractUserId(req);
-  console.log(`[generate] userId=${userId || 'anonymous'}, route="${route}", tone="${tone}"`);
+  console.log(`[generate] userId=${userId || 'anonymous'}, route="${finalRoute}", mood="${mood || tone}"`);
 
-  const prompt = buildTravelPrompt({ driverName, route, landmarks, highlights, tripDate, vehicleType, tone });
+  const prompt = buildTravelPrompt({ driverName, route, startingLocation, destination, landmarks, highlights, tripDate, vehicleType, tone, mood, style, title: requestedTitle });
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model  = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
-    generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 8192 },
+    generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 8192, responseMimeType: "application/json" },
   });
 
   let lastError = null;
   let title = null;
   let narrative = null;
+  let summary = null;
+  let socialCaption = null;
   let qualityInfo = {};
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
@@ -122,21 +129,24 @@ router.post('/', async (req, res) => {
       const raw    = result.response.text();
       console.log(`[generate] Raw length: ${raw.length} chars`);
 
-      const parsed = parseResponse(raw, route);
+      const parsed = parseResponse(raw, finalRoute);
       title     = parsed.title;
       narrative = parsed.narrative;
+      summary   = parsed.summary;
+      socialCaption = parsed.socialCaption;
       qualityInfo = validateNarrative(narrative);
 
       console.log(`[generate] Quality — words:${qualityInfo.words}, chars:${qualityInfo.chars}, valid:${qualityInfo.valid}`);
 
       if (qualityInfo.valid) break;
 
-      console.warn(`[generate] Attempt ${attempt} below quality gate. Retrying…`);
-      if (attempt <= MAX_RETRIES) await new Promise(r => setTimeout(r, 800));
+      console.warn(`[generate] Attempt ${attempt} below quality gate (words:${qualityInfo.words}/${MIN_WORDS}, chars:${qualityInfo.chars}/${MIN_CHARS}). Retrying immediately…`);
+      // No sleep — retry immediately to minimise latency
     } catch (err) {
       lastError = err;
       console.error(`[generate] Attempt ${attempt} error:`, err.message);
-      if (attempt <= MAX_RETRIES) await new Promise(r => setTimeout(r, 1000));
+      // Brief pause only on network/API errors to avoid hammering
+      if (attempt <= MAX_RETRIES) await new Promise(r => setTimeout(r, 300));
     }
   }
 
@@ -150,12 +160,18 @@ router.post('/', async (req, res) => {
 
   try {
     const id = db.insertGeneration({
-      driverName, route,
+      driverName, 
+      route: finalRoute,
+      startingLocation,
+      destination,
+      style,
+      summary,
+      socialCaption,
       landmarks:   landmarks   || null,
       highlights:  highlights  || null,
       tripDate:    tripDate    || null,
       vehicleType: vehicleType || 'Sedan',
-      tone:        tone        || 'Adventurous',
+      tone:        mood || tone || 'Adventurous',
       prompt,
       aiResponse:  narrative,
       title,
@@ -167,6 +183,8 @@ router.post('/', async (req, res) => {
     return res.json({
       id,
       title,
+      summary,
+      socialCaption,
       narrative,
       userId,
       wordCount:  qualityInfo.words,

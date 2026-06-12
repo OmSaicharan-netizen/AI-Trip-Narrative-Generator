@@ -555,12 +555,23 @@ function mapError(code, fallback) {
     'auth/network-request-failed': 'Network error. Check your internet connection.',
     'auth/user-disabled':          'This account has been disabled. Contact support.',
     'auth/operation-not-allowed':  'This sign-in method is not enabled. Contact support.',
-    'auth/popup-closed-by-user':   '',   // Silent — user cancelled
-    'auth/popup-blocked':          'Popup was blocked. Please allow popups for this site.',
-    'auth/cancelled-popup-request':'',
-    'auth/requires-recent-login':  'Please sign out and sign back in to continue.',
+    'auth/popup-closed-by-user':    '',   // Silent — user cancelled
+    'auth/popup-blocked':           'Popup was blocked. Please allow popups for this site and try again.',
+    'auth/cancelled-popup-request': '',
+    'auth/requires-recent-login':   'Please sign out and sign back in to continue.',
+    // ── This error means the provider is NOT enabled in Firebase Console ──
+    'auth/configuration-not-found': '⚙️ Google Sign-In is not enabled in Firebase Console.\n\nFix: Go to Firebase Console → Authentication → Sign-in method → Enable Google.',
+    'auth/internal-error':          'Authentication service error. Please try again in a moment.',
+    'auth/app-not-authorized':      'This app is not authorized. Check Firebase Console → Authentication → Authorized domains and add localhost.',
   };
-  return MAP[code] !== undefined ? MAP[code] : (fallback || `Sign-in error (${code}). Please try again.`);
+
+  // Special case: show a rich setup message for config errors
+  if (code === 'auth/configuration-not-found' || code === 'auth/operation-not-allowed') {
+    showSetupGuide();
+    return '';
+  }
+
+  return MAP[code] !== undefined ? MAP[code] : (fallback || `Authentication failed (${code}). Please try again.`);
 }
 
 // ── Error / success display ───────────────────────────────────
@@ -575,6 +586,15 @@ function showError(containerId, msgId, msg) {
 function clearErrors() {
   document.querySelectorAll('.error-alert,.success-alert')
     .forEach(el => el.classList.remove('show'));
+}
+
+// ── Setup guide (shown when Firebase providers not enabled) ───
+function showSetupGuide() {
+  // Hide any previous error
+  clearErrors();
+  // Show the setup modal
+  const modal = document.getElementById('setupGuideModal');
+  if (modal) modal.style.display = 'flex';
 }
 
 // ── Loading state ─────────────────────────────────────────────
@@ -792,5 +812,134 @@ async function handleForgot(e) {
   }
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SETUP GUIDE MODAL (shown when Firebase providers not enabled)
+═══════════════════════════════════════════════════════════════ -->
+<div id="setupGuideModal" style="
+  display:none; position:fixed; inset:0; z-index:10001;
+  background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
+  padding:20px;">
+  <div style="
+    background:#fff; border-radius:20px; max-width:540px; width:100%;
+    padding:36px 32px; position:relative; box-shadow:0 24px 64px rgba(0,0,0,0.3);
+    max-height:90vh; overflow-y:auto;">
+
+    <!-- Close button -->
+    <button onclick="document.getElementById('setupGuideModal').style.display='none'"
+            style="position:absolute;top:16px;right:16px;background:none;border:none;
+                   cursor:pointer;font-size:22px;color:#737784;line-height:1;">✕</button>
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:#ffdad6;
+                  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">⚙️</div>
+      <div>
+        <h2 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:700;color:#191c1e;margin:0;">
+          Enable Firebase Sign-In
+        </h2>
+        <p style="font-size:13px;color:#434653;margin:4px 0 0;">
+          Google Sign-In is not enabled yet. Follow these steps to fix it.
+        </p>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <ol style="list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:16px;">
+
+      <li style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:13px;flex-shrink:0;">1</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Open Firebase Console</div>
+          <a href="https://console.firebase.google.com/project/ai-trip-narrative-generator/authentication/providers"
+             target="_blank"
+             style="font-size:13px;color:#0f52ba;word-break:break-all;text-decoration:underline;">
+            console.firebase.google.com → ai-trip-narrative-generator → Authentication → Sign-in method
+          </a>
+        </div>
+      </li>
+
+      <li style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:13px;flex-shrink:0;">2</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Enable Google Sign-In</div>
+          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
+            Click <strong>Google</strong> → Toggle to <strong>Enabled</strong> → Add your support email → Save.
+          </p>
+        </div>
+      </li>
+
+      <li style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:13px;flex-shrink:0;">3</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Enable Email/Password</div>
+          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
+            Click <strong>Email/Password</strong> → Toggle to <strong>Enabled</strong> → Save.
+          </p>
+        </div>
+      </li>
+
+      <li style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:13px;flex-shrink:0;">4</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Add localhost as Authorized Domain</div>
+          <p style="font-size:13px;color:#434653;margin:0 0 6px;line-height:1.6;">
+            In <strong>Authentication → Settings → Authorized domains</strong>, click <strong>Add domain</strong> and add:
+          </p>
+          <code style="background:#f2f4f6;padding:6px 10px;border-radius:6px;font-size:13px;display:inline-block;font-family:monospace;">
+            localhost
+          </code>
+        </div>
+      </li>
+
+      <li style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#22c55e;color:#fff;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:16px;flex-shrink:0;">✓</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Refresh this page</div>
+          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
+            Once providers are enabled, refresh this page and sign in.
+          </p>
+        </div>
+      </li>
+    </ol>
+
+    <!-- Screenshot hint -->
+    <div style="background:#f2f4f6;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
+      <p style="font-size:12px;color:#434653;margin:0;line-height:1.6;">
+        💡 <strong>Tip:</strong> You need a Google account with access to the Firebase project
+        <strong>ai-trip-narrative-generator</strong>. The support email for Google Sign-In can be
+        any email you own.
+      </p>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="https://console.firebase.google.com/project/ai-trip-narrative-generator/authentication/providers"
+         target="_blank"
+         style="flex:1;min-width:180px;text-align:center;padding:13px;background:#003c90;color:#fff;
+                border-radius:12px;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;
+                font-size:14px;font-weight:700;">
+        Open Firebase Console →
+      </a>
+      <button onclick="document.getElementById('setupGuideModal').style.display='none'; location.reload();"
+              style="flex:1;min-width:120px;padding:13px;background:#f2f4f6;color:#191c1e;
+                     border:none;border-radius:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
+                     font-size:14px;font-weight:600;">
+        Done — Refresh
+      </button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

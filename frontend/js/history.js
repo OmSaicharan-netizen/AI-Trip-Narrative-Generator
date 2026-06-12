@@ -92,7 +92,7 @@ function attachFirestoreListener(userId) {
 
     // Use the raw Firestore query if we need to try without orderBy
     if (!withOrder && firebaseDb) {
-      const snap = firebaseDb
+      const unsubscribe = firebaseDb
         .collection('narratives')
         .where('userId', '==', userId)
         .onSnapshot(
@@ -113,7 +113,8 @@ function attachFirestoreListener(userId) {
             fetchHistoryFallback();
           }
         );
-      _unsubscribeFn = () => snap();
+      // unsubscribe IS the return value of onSnapshot—assign directly, not wrapped
+      _unsubscribeFn = unsubscribe;
       return;
     }
 
@@ -121,6 +122,11 @@ function attachFirestoreListener(userId) {
     _unsubscribeFn = FirestoreService.listenUserNarratives(userId, ({ data, error }) => {
       if (error) {
         console.error('[history] Firestore listener error:', error);
+        // Log the index creation URL if it's embedded in the error message
+        const indexMatch = error.match(/https:\/\/console\.firebase\.google\.com[^\s]+/);
+        if (indexMatch) {
+          console.warn('[history] 🔗 Create missing Firestore index at:', indexMatch[0]);
+        }
         if (!tried && (error.includes('index') || error.includes('Index'))) {
           tried = true;
           console.warn('[history] Composite index missing — retrying without orderBy');
@@ -146,14 +152,19 @@ function attachFirestoreListener(userId) {
 function applySearchAndRender() {
   const q = _historySearch.toLowerCase().trim();
 
+  // Always exclude soft-deleted records from display
+  const active = _narratives.filter(r => !r.isDeleted);
+
   _filteredNarratives = q
-    ? _narratives.filter(r =>
-        (r.route       || '').toLowerCase().includes(q) ||
-        (r.driverName  || '').toLowerCase().includes(q) ||
-        (r.title       || '').toLowerCase().includes(q) ||
-        (r.narrative   || '').toLowerCase().slice(0, 200).includes(q)
+    ? active.filter(r =>
+        (r.route             || '').toLowerCase().includes(q) ||
+        (r.driverName        || '').toLowerCase().includes(q) ||
+        (r.title             || '').toLowerCase().includes(q) ||
+        (r.destination       || '').toLowerCase().includes(q) ||
+        (r.startingLocation  || '').toLowerCase().includes(q) ||
+        (r.narrative         || '').toLowerCase().slice(0, 300).includes(q)
       )
-    : [..._narratives];
+    : [...active];
 
   renderHistoryGrid();
   updateHistoryStats();
@@ -194,6 +205,43 @@ function renderHistoryGrid() {
 
   grid.innerHTML = page.map((rec, i) => renderCard(rec, start + i)).join('');
 
+  // ── Event delegation: single listener, replaced cleanly each render ─────
+  // We use AbortController so the old listener is removed before adding the new one.
+  // Without this, every renderHistoryGrid() call stacks another listener and
+  // multiple confirm() dialogs fire/dismiss instantly.
+  if (grid._delegateAbort) grid._delegateAbort.abort();
+  const abortCtrl = new AbortController();
+  grid._delegateAbort = abortCtrl;
+
+  grid.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-narrative-id]');
+    if (!card) return;
+
+    const narrativeId = card.dataset.narrativeId;
+
+    // ── Delete (highest priority — check first) ──────────────────
+    if (e.target.closest('.nc-delete-btn')) {
+      e.stopPropagation();
+      e.preventDefault();
+      deleteNarrativeCard(narrativeId);
+      return;
+    }
+
+    // ── Listen ───────────────────────────────────────────────────
+    if (e.target.closest('.nc-listen-btn')) {
+      e.stopPropagation();
+      const rec = _narratives.find(r => String(r.id) === narrativeId);
+      if (rec) historyListenCard(rec.narrative || '');
+      return;
+    }
+
+    // ── Open modal — only on explicit open targets ────────────────
+    if (e.target.closest('.nc-open-btn')) {
+      openNarrativeModal(narrativeId);
+      return;
+    }
+  }, { signal: abortCtrl.signal });
+
   // Scroll-reveal animation
   grid.querySelectorAll('.narrative-card').forEach((card, idx) => {
     card.style.opacity = '0';
@@ -207,6 +255,8 @@ function renderHistoryGrid() {
 
   wireNavLinks?.();
 }
+
+
 
 // ── Render single card ────────────────────────────────────────
 function renderCard(rec, i) {
@@ -228,16 +278,13 @@ function renderCard(rec, i) {
     dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
-  // Firestore doc ID (primary) or SQLite id (fallback)
-  const recId     = rec.id;           // Firestore doc ID
-  const sqliteId  = rec.sqliteId;     // linked SQLite row
-  const recIdStr  = JSON.stringify(recId);
-  const narrativeStr = JSON.stringify(rec.narrative || '');
+  const safeId = String(rec.id).replace(/"/g, '&quot;');
 
   return `
-    <div class="narrative-card group bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline-variant hover:shadow-ambient-lg transition-all duration-300 hover:-translate-y-1">
+    <div class="narrative-card group bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline-variant hover:shadow-ambient-lg transition-all duration-300 hover:-translate-y-1"
+         data-narrative-id="${safeId}">
       <!-- Image -->
-      <div class="relative h-52 overflow-hidden cursor-pointer" onclick="openNarrativeModal(${recIdStr})">
+      <div class="relative h-52 overflow-hidden cursor-pointer nc-open-btn">
         <img src="${img}" alt="${escHtml(rec.route || 'Trip')}"
              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
              loading="lazy">
@@ -248,8 +295,7 @@ function renderCard(rec, i) {
         <!-- Rating badge -->
         ${stars ? `<div class="absolute top-4 right-4 glass-card px-3 py-1 rounded-full text-xs">${stars}</div>` : ''}
         <!-- Listen overlay -->
-        <button class="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-container"
-                onclick="event.stopPropagation(); historyListenCard(${narrativeStr})"
+        <button class="nc-listen-btn absolute bottom-4 right-4 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-container"
                 title="Listen" aria-label="Listen to narration">
           <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1;">headphones</span>
         </button>
@@ -262,8 +308,7 @@ function renderCard(rec, i) {
           <span class="font-label-md text-label-md">${dateStr}</span>
         </div>` : ''}
 
-        <h3 class="font-headline-md text-headline-md text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors"
-            onclick="openNarrativeModal(${recIdStr})">
+        <h3 class="nc-open-btn font-headline-md text-headline-md text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors">
           ${escHtml(rec.title || rec.route || 'Untitled Journey')}
         </h3>
 
@@ -281,14 +326,12 @@ function renderCard(rec, i) {
           <!-- Actions -->
           <div class="flex items-center gap-1">
             <!-- Delete -->
-            <button onclick="event.stopPropagation(); deleteNarrativeCard(${recIdStr})"
-                    class="p-1.5 rounded-lg text-error hover:bg-error-container transition-all opacity-0 group-hover:opacity-100"
+            <button class="nc-delete-btn p-1.5 rounded-lg text-error hover:bg-error-container transition-all"
                     title="Delete narrative" aria-label="Delete">
               <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
             </button>
             <!-- View -->
-            <button onclick="openNarrativeModal(${recIdStr})"
-                    class="text-primary font-label-md text-sm flex items-center gap-1 hover:gap-3 transition-all">
+            <button class="nc-open-btn text-primary font-label-md text-sm flex items-center gap-1 hover:gap-3 transition-all">
               View <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
             </button>
           </div>
@@ -297,74 +340,189 @@ function renderCard(rec, i) {
     </div>`;
 }
 
-// ── Open narrative in modal (Firestore doc) ───────────────────
-window.openNarrativeModal = function (firestoreId) {
-  const rec = _narratives.find(r => r.id === firestoreId);
-  if (!rec) { openModal(firestoreId); return; }
+// ── Open narrative in modal — shows ALL generated content ──────────────
+window.openNarrativeModal = function (narrativeId) {
+  // Match by string comparison (data-narrative-id is always a string)
+  const rec = _narratives.find(r => String(r.id) === String(narrativeId));
+
+  // If not found in Firestore cache, fall back to REST API (SQLite numeric id)
+  if (!rec) {
+    console.warn('[history] openNarrativeModal: id not in cache, falling back to openModal():', narrativeId);
+    const numId = String(narrativeId).replace('sqlite-', '');
+    openModal(numId);
+    return;
+  }
 
   const modal = document.getElementById('detailModal');
   const body  = document.getElementById('modalBody');
-  if (!modal || !body) return;
+  if (!modal || !body) { console.error('[history] detailModal or modalBody not found in DOM'); return; }
 
+  console.log('[history] Opening modal for:', rec.title || rec.route, '| id:', narrativeId);
+
+  // ── Format narrative text ──────────────────────────────────────────
   const narrativeText = rec.narrative || '';
-  const narrativeHtml = narrativeText.split('\n').map(line => {
-    const t = line.trim();
-    return t ? `<p class="font-body-md text-body-md text-on-surface-variant mb-3 leading-relaxed">${escHtml(t)}</p>` : '';
-  }).join('');
+  const narrativeHtml = narrativeText
+    .split('\n')
+    .map(line => {
+      const t = line.trim();
+      return t ? `<p class="font-body-md text-body-md text-on-surface-variant mb-3 leading-relaxed">${escHtml(t)}</p>` : '';
+    })
+    .join('');
 
+  // ── Format dates ────────────────────────────────────────────────
+  const fmtDate = (val) => {
+    if (!val) return null;
+    try {
+      const d = val?.toDate ? val.toDate() : new Date(val);
+      return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return String(val); }
+  };
+  const fmtDateTime = (val) => {
+    if (!val) return null;
+    try {
+      const d = val?.toDate ? val.toDate() : new Date(val);
+      return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return String(val); }
+  };
+
+  const tripDateFmt    = fmtDate(rec.tripDate);
+  const createdAtFmt   = fmtDateTime(rec.createdAt);
+
+  // ── Quality metrics ──────────────────────────────────────────
+  const words = rec.wordCount ?? (narrativeText ? narrativeText.trim().split(/\s+/).filter(Boolean).length : 0);
+  const chars = rec.charCount ?? narrativeText.length;
+  const qualityOk = words >= 200 && chars >= 3000;
+
+  // ── Status badge ──────────────────────────────────────────────
+  const status = rec.status || 'active';
+  const statusColors = {
+    active:   'bg-tertiary-fixed/40 text-tertiary',
+    archived: 'bg-error-container text-error',
+    draft:    'bg-surface-container text-on-surface-variant',
+  };
+  const statusBadge = `<span class="badge ${statusColors[status] || statusColors.active}">${escHtml(status)}</span>`;
+
+  // ── Social caption + hashtags ───────────────────────────────
+  const socialCaption = rec.socialCaption || '';
+  // Extract hashtags from the caption
+  const hashtags = socialCaption.match(/#[\w\u0900-\u097F]+/g) || [];
+  const captionText = socialCaption.replace(/#[\w\u0900-\u097F]+/g, '').trim();
+
+  // ── Rating stars ───────────────────────────────────────────────
+  const starsHtml = rec.rating
+    ? `<span style="color:#fe6f42;font-size:20px;">${'\u2605'.repeat(rec.rating)}${'\u2606'.repeat(5 - rec.rating)}</span>`
+    : '';
+
+  // ── Build modal HTML ────────────────────────────────────────────
   body.innerHTML = `
     <div class="space-y-6">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="font-headline-lg text-headline-lg text-primary mb-1">${escHtml(rec.title || rec.route || 'Untitled')}</h2>
-          <p class="text-sm text-on-surface-variant font-label-md">
-            ${rec.driverName ? '👤 ' + escHtml(rec.driverName) + ' · ' : ''}
-            ${rec.route      ? '🗺️ ' + escHtml(rec.route)      + ' · ' : ''}
-            ${rec.tone       ? escHtml(rec.tone)                       : ''}
-          </p>
+
+      <!-- ── Header: Title + Actions ───────────────────────────────── -->
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-3 flex-wrap mb-2">
+            ${statusBadge}
+            ${starsHtml ? `<div>${starsHtml}</div>` : ''}
+            ${createdAtFmt ? `<span class="text-xs text-outline font-label-md">📅 Created ${escHtml(createdAtFmt)}</span>` : ''}
+          </div>
+          <h2 class="font-headline-lg text-headline-lg text-primary leading-tight">${escHtml(rec.title || rec.route || 'Untitled Journey')}</h2>
+          ${rec.comment ? `<p class="text-sm text-on-surface-variant italic mt-1">"${escHtml(rec.comment)}"</p>` : ''}
         </div>
         <div class="flex gap-2 flex-shrink-0">
-          <button onclick="historyListenCard(${JSON.stringify(narrativeText)})"
+          <button id="modalListenBtn"
                   class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-label-md hover:bg-primary-container transition-all">
             <span class="material-symbols-outlined" style="font-size:18px;">play_circle</span> Listen
           </button>
-          <button onclick="navigator.clipboard?.writeText(${JSON.stringify(narrativeText)}); showToast('Copied!', 'success')"
-                  class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-all" title="Copy">
+          <button id="modalCopyBtn"
+                  class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-all" title="Copy narrative">
             <span class="material-symbols-outlined">content_copy</span>
           </button>
         </div>
       </div>
 
-      ${rec.rating ? `<div class="flex items-center gap-2">
-        <span style="color:#fe6f42;font-size:20px;">${'★'.repeat(rec.rating)}${'☆'.repeat(5 - rec.rating)}</span>
-        ${rec.comment ? `<span class="text-sm text-on-surface-variant italic">"${escHtml(rec.comment)}"</span>` : ''}
-      </div>` : ''}
 
-      <div class="narrative-prose p-6 bg-surface rounded-xl border border-outline-variant max-h-96 overflow-y-auto">
-        ${narrativeHtml || '<p class="text-on-surface-variant">No content.</p>'}
-      </div>
-
-      <div class="flex flex-wrap gap-3 text-xs text-outline font-label-md">
-        ${rec.landmarks   ? `<span>📍 ${escHtml(rec.landmarks)}</span>`  : ''}
-        ${rec.vehicleType ? `<span>🚗 ${escHtml(rec.vehicleType)}</span>` : ''}
-        ${rec.tripDate    ? `<span>📅 ${new Date(rec.tripDate).toLocaleDateString()}</span>` : ''}
-      </div>
-    </div>`;
+  // Wire modal buttons safely via addEventListener (no onclick attributes)
+  document.getElementById('modalListenBtn')?.addEventListener('click', () => {
+    historyListenCard(narrativeText);
+  });
+  document.getElementById('modalCopyBtn')?.addEventListener('click', () => {
+    navigator.clipboard?.writeText(narrativeText)
+      .then(() => showToast('Copied!', 'success'))
+      .catch(() => showToast('Copy failed.', 'error'));
+  });
 
   modal.classList.add('open');
 };
 
-// ── Delete a narrative ────────────────────────────────────────
-window.deleteNarrativeCard = async function (firestoreId) {
-  if (!confirm('Delete this narrative? This cannot be undone.')) return;
 
+// ── Delete a narrative (soft-delete — record is preserved) ────────────────
+window.deleteNarrativeCard = async function (firestoreId) {
+  const rec = _narratives.find(r => r.id === firestoreId);
+  const title = rec ? (rec.title || rec.route || 'this narrative') : 'this narrative';
+
+  // Confirmation dialog — emphasize soft-delete (archiving)
+  const confirmed = confirm(
+    `Archive "${title}"?\n\nThis will remove the narrative from your list. The record will be preserved and can be recovered if needed.`
+  );
+  if (!confirmed) return;
+
+  // ✔ Immediately hide from UI (optimistic update)
+  _narratives = _narratives.filter(r => r.id !== firestoreId);
+  applySearchAndRender();
+  showToast('Archiving narrative…', 'info');
+
+  let firestoreOk = false;
+  let sqliteOk    = false;
+  const errors    = [];
+
+  // 1️⃣  Soft-delete in Firestore (sets isDeleted: true, preserves document)
   try {
     const { error } = await FirestoreService.deleteNarrative(firestoreId);
     if (error) throw new Error(error);
-    showToast('Narrative deleted.', 'success');
-    // Firestore listener will automatically remove it from the grid
+    firestoreOk = true;
+    console.log(`[history] Firestore soft-delete OK: ${firestoreId}`);
   } catch (e) {
-    showToast(`Delete failed: ${e.message}`, 'error');
+    console.error('[history] Firestore soft-delete failed:', e.message);
+    errors.push(`Firestore: ${e.message}`);
+  }
+
+  // 2️⃣  Soft-delete from SQLite via authenticated backend DELETE
+  const sqliteId = rec?.sqliteId ?? null;
+  if (sqliteId) {
+    try {
+      const token = await window.getIdToken?.();
+      const res = await fetch(`${API_BASE}/history/${sqliteId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      sqliteOk = true;
+      console.log(`[history] SQLite soft-delete OK: sqliteId=${sqliteId}`);
+    } catch (e) {
+      console.error('[history] SQLite soft-delete failed:', e.message);
+      errors.push(`Database: ${e.message}`);
+    }
+  } else {
+    console.warn('[history] No sqliteId found on record — skipping SQLite soft-delete');
+    sqliteOk = true; // nothing to archive in SQLite
+  }
+
+  // 3️⃣  Final toast
+  if (firestoreOk || sqliteOk) {
+    if (errors.length) {
+      showToast(`Narrative archived (partial — ${errors.join('; ')})`, 'info');
+    } else {
+      showToast('Narrative archived successfully.', 'success');
+    }
+  } else {
+    // Undo optimistic removal if both failed
+    if (rec) _narratives.unshift(rec);
+    applySearchAndRender();
+    showToast(`Archive failed: ${errors.join('; ')}`, 'error');
   }
 };
 
@@ -435,13 +593,18 @@ window.histPageChange = function (p) {
 // ── REST API fallback ─────────────────────────────────────────
 async function fetchHistoryFallback() {
   showHistoryLoading();
+  console.log('[history] Fetching via REST fallback…');
   try {
     const params = new URLSearchParams({ page: 1, limit: 50 });
     const res  = await fetch(`${API_BASE}/history?${params}`);
     const json = await res.json();
-    if (!res.ok) throw new Error(json.error);
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
-    _narratives = (json.records || []).map(r => ({
+    // Support both "records" (new) and "data" (old) key names
+    const rows = json.records || json.data || [];
+    console.log(`[history] REST fallback: received ${rows.length} records (total=${json.pagination?.total ?? '?'})`);
+
+    _narratives = rows.map(r => ({
       id:          `sqlite-${r.id}`,
       sqliteId:    r.id,
       driverName:  r.driver_name,
@@ -460,9 +623,11 @@ async function fetchHistoryFallback() {
 
     applySearchAndRender();
   } catch (e) {
+    console.error('[history] REST fallback error:', e.message);
     showHistoryError(e.message);
   }
 }
+
 
 // ── UI helpers ────────────────────────────────────────────────
 function showHistoryLoading() {

@@ -6,7 +6,7 @@
  * Call db.init() once at server startup (awaited before listen()).
  * The DB is persisted to disk as a binary .db file after every write.
  *
- * Schema v2: added user_id column (migration-safe).
+ * Schema v3: added is_deleted + deleted_at for soft-delete support.
  */
 
 const path = require('path');
@@ -63,7 +63,7 @@ async function init() {
     db = new SQL.Database();
   }
 
-  // ── Schema v2 ─────────────────────────────────────────────
+  // ── Schema v3 ─────────────────────────────────────────────
   db.run(`
     CREATE TABLE IF NOT EXISTS generations (
       id            INTEGER  PRIMARY KEY AUTOINCREMENT,
@@ -77,10 +77,17 @@ async function init() {
       prompt        TEXT,
       ai_response   TEXT     NOT NULL,
       title         TEXT,
+      summary       TEXT     DEFAULT NULL,
+      social_caption TEXT    DEFAULT NULL,
+      starting_location TEXT DEFAULT NULL,
+      destination   TEXT     DEFAULT NULL,
+      style         TEXT     DEFAULT 'Adventure',
       rating        INTEGER  DEFAULT NULL,
       comment       TEXT     DEFAULT NULL,
       user_id       TEXT     DEFAULT NULL,
       firestore_id  TEXT     DEFAULT NULL,
+      is_deleted    INTEGER  DEFAULT 0,
+      deleted_at    TEXT     DEFAULT NULL,
       created_at    TEXT     DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     )
   `);
@@ -90,6 +97,13 @@ async function init() {
   const migrateColumns = [
     "ALTER TABLE generations ADD COLUMN user_id TEXT DEFAULT NULL",
     "ALTER TABLE generations ADD COLUMN firestore_id TEXT DEFAULT NULL",
+    "ALTER TABLE generations ADD COLUMN summary TEXT DEFAULT NULL",
+    "ALTER TABLE generations ADD COLUMN social_caption TEXT DEFAULT NULL",
+    "ALTER TABLE generations ADD COLUMN starting_location TEXT DEFAULT NULL",
+    "ALTER TABLE generations ADD COLUMN destination TEXT DEFAULT NULL",
+    "ALTER TABLE generations ADD COLUMN style TEXT DEFAULT 'Adventure'",
+    "ALTER TABLE generations ADD COLUMN is_deleted INTEGER DEFAULT 0",
+    "ALTER TABLE generations ADD COLUMN deleted_at TEXT DEFAULT NULL",
   ];
   migrateColumns.forEach(sql => {
     try { db.run(sql); } catch (_) { /* column already exists */ }
@@ -103,18 +117,20 @@ async function init() {
 function insertGeneration({
   driverName, route, landmarks, highlights, tripDate,
   vehicleType, tone, prompt, aiResponse, title,
+  summary, socialCaption, startingLocation, destination, style,
   userId = null, firestoreId = null,
 }) {
   run(
     `INSERT INTO generations
        (driver_name, route, landmarks, highlights, trip_date, vehicle_type,
-        tone, prompt, ai_response, title, user_id, firestore_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tone, prompt, ai_response, title, summary, social_caption, starting_location, destination, style, user_id, firestore_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       driverName, route,
       landmarks   ?? null, highlights ?? null, tripDate ?? null,
       vehicleType ?? 'Sedan', tone ?? 'Adventurous',
       prompt, aiResponse, title ?? null,
+      summary ?? null, socialCaption ?? null, startingLocation ?? null, destination ?? null, style ?? 'Adventure',
       userId ?? null, firestoreId ?? null,
     ]
   );
@@ -127,7 +143,8 @@ function updateFirestoreId(sqliteId, firestoreId) {
 
 function getGenerations({ page = 1, limit = 12, search = '', userId = null } = {}) {
   const offset = (page - 1) * limit;
-  const conditions = [];
+  // Always exclude soft-deleted records
+  const conditions = ['(is_deleted = 0 OR is_deleted IS NULL)'];
   const params = [];
 
   if (userId) {
@@ -140,12 +157,12 @@ function getGenerations({ page = 1, limit = 12, search = '', userId = null } = {
     params.push(t, t, t);
   }
 
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
 
   const total = queryOne(`SELECT COUNT(*) as count FROM generations ${where}`, params)?.count ?? 0;
   const data  = query(
     `SELECT id, driver_name, route, landmarks, highlights, trip_date,
-            vehicle_type, tone, title, rating, comment, user_id,
+            vehicle_type, tone, title, summary, social_caption, starting_location, destination, style, rating, comment, user_id,
             firestore_id, created_at
      FROM generations ${where}
      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
@@ -155,35 +172,53 @@ function getGenerations({ page = 1, limit = 12, search = '', userId = null } = {
 }
 
 function getGeneration(id) {
-  return queryOne('SELECT * FROM generations WHERE id = ?', [id]);
+  // Only return non-deleted records
+  return queryOne('SELECT * FROM generations WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)', [id]);
 }
 
 function updateRating(id, rating, comment) {
   run('UPDATE generations SET rating = ?, comment = ? WHERE id = ?', [rating, comment ?? null, id]);
 }
 
+/**
+ * Soft-delete: marks a generation as deleted but preserves the record.
+ * Sets is_deleted = 1 and records the deletion timestamp.
+ * The record can be recovered later by calling restoreGeneration().
+ */
 function deleteGeneration(id) {
-  run('DELETE FROM generations WHERE id = ?', [id]);
+  run(
+    `UPDATE generations SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?`,
+    [id]
+  );
+}
+
+/**
+ * Restore a soft-deleted generation.
+ */
+function restoreGeneration(id) {
+  run('UPDATE generations SET is_deleted = 0, deleted_at = NULL WHERE id = ?', [id]);
 }
 
 // ── Analytics ────────────────────────────────────────────────
 function getAnalytics() {
-  const total      = queryOne('SELECT COUNT(*) as total FROM generations')?.total ?? 0;
-  const avgRating  = queryOne("SELECT ROUND(AVG(CAST(rating AS REAL)), 1) as avg FROM generations WHERE rating IS NOT NULL")?.avg ?? 0;
-  const ratedCount = queryOne("SELECT COUNT(*) as count FROM generations WHERE rating IS NOT NULL")?.count ?? 0;
+  const activeFilter = '(is_deleted = 0 OR is_deleted IS NULL)';
+  const total      = queryOne(`SELECT COUNT(*) as total FROM generations WHERE ${activeFilter}`)?.total ?? 0;
+  const avgRating  = queryOne(`SELECT ROUND(AVG(CAST(rating AS REAL)), 1) as avg FROM generations WHERE ${activeFilter} AND rating IS NOT NULL`)?.avg ?? 0;
+  const ratedCount = queryOne(`SELECT COUNT(*) as count FROM generations WHERE ${activeFilter} AND rating IS NOT NULL`)?.count ?? 0;
 
   const perDay = query(`
     SELECT strftime('%Y-%m-%d', created_at) as day, COUNT(*) as count
     FROM   generations
-    WHERE  created_at >= strftime('%Y-%m-%d', 'now', '-30 days')
+    WHERE  ${activeFilter}
+    AND    created_at >= strftime('%Y-%m-%d', 'now', '-30 days')
     GROUP  BY strftime('%Y-%m-%d', created_at)
     ORDER  BY day ASC
   `);
-  const toneDistribution = query('SELECT tone, COUNT(*) as count FROM generations GROUP BY tone ORDER BY count DESC');
-  const topRoutes        = query('SELECT route, COUNT(*) as count FROM generations GROUP BY route ORDER BY count DESC LIMIT 5');
-  const ratingDist       = query('SELECT rating, COUNT(*) as count FROM generations WHERE rating IS NOT NULL GROUP BY rating ORDER BY rating ASC');
-  const topDrivers       = query('SELECT driver_name, COUNT(*) as count FROM generations GROUP BY driver_name ORDER BY count DESC LIMIT 5');
-  const recentHighRated  = query('SELECT id, driver_name, route, title, rating, created_at FROM generations WHERE rating >= 4 ORDER BY created_at DESC LIMIT 5');
+  const toneDistribution = query(`SELECT tone, COUNT(*) as count FROM generations WHERE ${activeFilter} GROUP BY tone ORDER BY count DESC`);
+  const topRoutes        = query(`SELECT route, COUNT(*) as count FROM generations WHERE ${activeFilter} GROUP BY route ORDER BY count DESC LIMIT 5`);
+  const ratingDist       = query(`SELECT rating, COUNT(*) as count FROM generations WHERE ${activeFilter} AND rating IS NOT NULL GROUP BY rating ORDER BY rating ASC`);
+  const topDrivers       = query(`SELECT driver_name, COUNT(*) as count FROM generations WHERE ${activeFilter} GROUP BY driver_name ORDER BY count DESC LIMIT 5`);
+  const recentHighRated  = query(`SELECT id, driver_name, route, title, rating, created_at FROM generations WHERE ${activeFilter} AND rating >= 4 ORDER BY created_at DESC LIMIT 5`);
 
   return { kpis: { total, avgRating, ratedCount }, perDay, toneDistribution, topRoutes, ratingDist, topDrivers, recentHighRated };
 }
@@ -191,18 +226,19 @@ function getAnalytics() {
 // ── Admin ─────────────────────────────────────────────────────
 function getAdminData({ page = 1, limit = 20, search = '', tone = '', rating = '' } = {}) {
   const offset     = (page - 1) * limit;
-  const conditions = [];
+  // Always exclude soft-deleted records from admin view (use separate archived view if needed)
+  const conditions = ['(is_deleted = 0 OR is_deleted IS NULL)'];
   const params     = [];
 
   if (search) { conditions.push('(driver_name LIKE ? OR route LIKE ? OR title LIKE ?)'); const t = `%${search}%`; params.push(t, t, t); }
   if (tone)   { conditions.push('tone = ?');   params.push(tone); }
   if (rating) { conditions.push('rating = ?'); params.push(parseInt(rating, 10)); }
 
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
   const total = queryOne(`SELECT COUNT(*) as count FROM generations ${where}`, params)?.count ?? 0;
   const data  = query(
     `SELECT id, driver_name, route, landmarks, highlights, trip_date,
-            vehicle_type, tone, title, rating, comment, user_id, created_at
+            vehicle_type, tone, title, summary, social_caption, starting_location, destination, style, rating, comment, user_id, created_at
      FROM generations ${where}
      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset]
@@ -213,7 +249,7 @@ function getAdminData({ page = 1, limit = 20, search = '', tone = '', rating = '
 function getAllForExport() {
   return query(
     `SELECT id, driver_name, route, landmarks, highlights, trip_date,
-            vehicle_type, tone, title, rating, comment, user_id, created_at
+            vehicle_type, tone, title, summary, social_caption, starting_location, destination, style, rating, comment, user_id, created_at
      FROM generations ORDER BY created_at DESC`
   );
 }

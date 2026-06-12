@@ -8,7 +8,7 @@
  */
 
 // ── Constants ────────────────────────────────────────────────
-const VIEWS      = ['explore', 'generate', 'history', 'analytics', 'admin'];
+const VIEWS      = ['explore', 'generate', 'history', 'analytics', 'admin', 'about', 'contact'];
 const TOUR_IMAGES = [
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
   'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=800&q=80',

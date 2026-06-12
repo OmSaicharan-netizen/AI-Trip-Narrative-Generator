@@ -13,6 +13,7 @@ const historyRoute = require('./routes/history');
 const feedbackRoute = require('./routes/feedback');
 const analyticsRoute = require('./routes/analytics');
 const adminRoute = require('./routes/admin');
+const suggestRoute = require('./routes/suggest');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,7 @@ app.use('/api/history', historyRoute);
 app.use('/api/feedback', feedbackRoute);
 app.use('/api/analytics', analyticsRoute);
 app.use('/api/admin', adminRoute);
+app.use('/api/suggest-title', suggestRoute);
 
 // Health check
 app.get('/api/health', (_req, res) => {

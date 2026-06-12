@@ -1,7 +1,30 @@
+# ============================================================
+# AI Trip Narrative Generator — .gitignore
+# ============================================================
+
+# --- Node.js ---
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Environment & Secrets (NEVER commit these) ---
 backend/.env
 backend/firebase-service-account.json
+
+# --- Database files (runtime data) ---
 backend/db/trips.db
-*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# --- OS & Editor ---
 .DS_Store
 Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# --- Build outputs ---
+dist/
+build/

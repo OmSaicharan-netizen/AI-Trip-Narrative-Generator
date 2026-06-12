@@ -263,23 +263,44 @@ window.FirestoreService = (() => {
 
   /**
    * Save a generated narrative to Firestore (cloud backup of SQLite row).
+   * Saves ALL generated fields so the detail modal can display complete information.
    * Called after successful generation.
    */
   async function saveNarrative(narrativeData) {
     return createDocument('narratives', {
-      driverName:  narrativeData.driverName,
-      route:       narrativeData.route,
-      landmarks:   narrativeData.landmarks   || null,
-      highlights:  narrativeData.highlights  || null,
-      tripDate:    narrativeData.tripDate    || null,
-      vehicleType: narrativeData.vehicleType || 'Sedan',
-      tone:        narrativeData.tone        || 'Adventurous',
-      title:       narrativeData.title,
-      narrative:   narrativeData.narrative,
-      sqliteId:    narrativeData.id          || null,   // Link back to SQLite row
-      userId:      narrativeData.userId      || null,
-      rating:      null,
-      comment:     null,
+      // Core identification
+      driverName:       narrativeData.driverName       || null,
+      route:            narrativeData.route            || null,
+      startingLocation: narrativeData.startingLocation || null,
+      destination:      narrativeData.destination      || null,
+      // Trip details
+      landmarks:        narrativeData.landmarks        || null,
+      highlights:       narrativeData.highlights       || null,
+      tripDate:         narrativeData.tripDate         || null,
+      vehicleType:      narrativeData.vehicleType      || 'Sedan',
+      // Style
+      tone:             narrativeData.tone             || narrativeData.mood || 'Adventurous',
+      mood:             narrativeData.mood             || narrativeData.tone || 'Adventurous',
+      style:            narrativeData.style            || 'Adventure',
+      // Generated content
+      title:            narrativeData.title            || null,
+      narrative:        narrativeData.narrative        || null,
+      summary:          narrativeData.summary          || null,
+      socialCaption:    narrativeData.socialCaption    || null,
+      // Quality metrics
+      wordCount:        narrativeData.wordCount        || null,
+      charCount:        narrativeData.charCount        || null,
+      // Linking
+      sqliteId:         narrativeData.sqliteId         || narrativeData.id || null,
+      userId:           narrativeData.userId           || null,
+      // Soft-delete flag (default: not deleted)
+      isDeleted:        false,
+      deletedAt:        null,
+      // Status
+      status:           'active',
+      // Rating (filled in later)
+      rating:           null,
+      comment:          null,
     });
   }
 
@@ -291,10 +312,17 @@ window.FirestoreService = (() => {
   }
 
   /**
-   * Delete a narrative document.
+   * Soft-delete a narrative document.
+   * Sets isDeleted = true and records deletedAt timestamp.
+   * The Firestore document is PRESERVED and can be recovered.
+   * The real-time listener will automatically exclude it via client-side filter.
    */
   async function deleteNarrative(firestoreId) {
-    return deleteDocument('narratives', firestoreId);
+    return updateDocument('narratives', firestoreId, {
+      isDeleted: true,
+      deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status:    'archived',
+    });
   }
 
   /**
@@ -305,8 +333,11 @@ window.FirestoreService = (() => {
   }
 
   /**
-   * Real-time listener: subscribe to all narratives for a given user.
+   * Real-time listener: subscribe to all active (non-deleted) narratives for a given user.
    * Ordered by createdAt DESC.
+   * Filters out documents where isDeleted === true client-side
+   * (Firestore inequality query on two fields requires a composite index,
+   *  so we filter isDeleted client-side for simplicity).
    * Returns: unsubscribe function.
    *
    * @param {string}   userId   — Firebase UID
@@ -323,8 +354,14 @@ window.FirestoreService = (() => {
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
       .onSnapshot(
-        (snap) => callback({ data: snap.docs.map(_docToObj), error: null }),
-        (e)    => callback({ data: [], error: e.message })
+        (snap) => {
+          // Filter out soft-deleted documents client-side
+          const data = snap.docs
+            .map(_docToObj)
+            .filter(doc => !doc.isDeleted);
+          callback({ data, error: null });
+        },
+        (e) => callback({ data: [], error: e.message })
       );
   }
 
