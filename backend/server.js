@@ -40,13 +40,17 @@ const globalLimiter = rateLimit({
 });
 
 // ── Middleware ──────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+];
+if (process.env.RENDER_EXTERNAL_URL) {
+  allowedOrigins.push(process.env.RENDER_EXTERNAL_URL);
+}
 app.use(cors({
-  origin: [
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500',
-  ],
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(cookieParser());
