@@ -3,6 +3,10 @@
   "version": "3.0.0",
   "description": "AI Trip Narrative Generator Backend — Manivtha Tours & Travels",
   "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
