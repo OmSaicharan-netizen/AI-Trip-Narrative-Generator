@@ -15,12 +15,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <!-- Firebase JS SDK v10 (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+
 
   <!-- Tailwind CSS (Horizon Ethos config) -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -282,6 +277,136 @@
     /* Line clamp */
     .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+    /* ── Photo Drop Zone ─────────────────────────────────────── */
+    #photoDropZone {
+      border: 2px dashed #c3c6d5;
+      border-radius: 16px;
+      background: #f7f9fb;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    #photoDropZone:hover, #photoDropZone.photo-drop-active {
+      border-color: #003c90;
+      background: #d9e2ff;
+      box-shadow: 0 0 0 4px rgba(0,60,144,0.10);
+    }
+    #photoDropZone.photo-drop-active {
+      transform: scale(1.01);
+    }
+    #photoThumbGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 10px;
+    }
+    .photo-thumb-item {
+      width: 100%; aspect-ratio: 1;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    @keyframes thumbIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Narrative Photo Gallery ─────────────────────────────── */
+    #narrativePhotoGallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .photo-gallery-item {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,60,144,0.10);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .photo-gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,60,144,0.18);
+    }
+
+    /* ── Photo Editor Modal ──────────────────────────────────── */
+    #photoEditorModal {
+      position: fixed; inset: 0; background: rgba(10,12,14,0.82);
+      z-index: 1200; display: none; align-items: center; justify-content: center;
+      padding: 16px; backdrop-filter: blur(6px);
+    }
+    #photoEditorModal.flex { display: flex; }
+    #photoEditorBox {
+      background: #fff; border-radius: 24px;
+      max-width: 900px; width: 100%; max-height: 92vh; overflow-y: auto;
+      position: relative; box-shadow: 0 32px 96px rgba(0,60,144,0.22);
+    }
+    .filter-chip { cursor: pointer; transition: transform 0.15s; }
+    .filter-chip:hover { transform: scale(1.06); }
+    .filter-chip.active span { color: #003c90; }
+    .aspect-chip {
+      padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid #c3c6d5; color: #434653; cursor: pointer; transition: all 0.15s;
+    }
+    .aspect-chip.active {
+      background: #003c90; color: #fff; border-color: #003c90;
+    }
+    .editor-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px; border-radius: 9999px;
+      background: #c3c6d5; outline: none; cursor: pointer;
+    }
+    .editor-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #003c90; cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(0,60,144,0.2);
+    }
+
+    /* ── Photo Editor Tabs ──────────────────────────────────── */
+    .active-tab {
+      background: #003c90; color: #fff;
+      box-shadow: 0 4px 12px rgba(0,60,144,0.3);
+    }
+    .inactive-tab {
+      background: transparent; color: #5c6375;
+      border: 1.5px solid #c3c6d5;
+    }
+    .inactive-tab:hover { background: #f0f2f8; color: #003c90; }
+    #photoEditorTabs button { border-radius: 12px; padding: 8px 18px; font-size:13px; font-weight:600; cursor:pointer; transition: all 0.2s; }
+
+    /* ── Social Post Studio ──────────────────────────────────── */
+    #socialPostStudio {
+      position: fixed; inset: 0;
+      background: rgba(5,8,16,0.88);
+      z-index: 1400; display: none;
+      align-items: stretch; justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    #socialPostStudio.flex { display: flex; }
+    #socialStudioBox {
+      background: #fff; width: 100%; max-width: 1100px;
+      margin: 16px auto; border-radius: 24px;
+      overflow-y: auto; display: flex; flex-direction: column;
+      box-shadow: 0 32px 96px rgba(0,60,144,0.25);
+    }
+    .studio-platform-tab {
+      transition: all 0.2s;
+    }
+    .studio-platform-tab.active {
+      background: linear-gradient(135deg,#003c90,#0f5bbf);
+      color: #fff; box-shadow: 0 4px 12px rgba(0,60,144,0.3);
+    }
+    .studio-platform-tab:not(.active) {
+      background: #f0f2f8; color: #5c6375;
+      border: 1.5px solid #c3c6d5;
+    }
+    .studio-tag {
+      display: inline-block; padding: 3px 10px; border-radius: 9999px;
+      background: #d9e2ff; color: #003c90; font-size: 11px; font-weight:700;
+      cursor: pointer; transition: background 0.15s;
+      margin: 2px;
+    }
+    .studio-tag:hover { background: #003c90; color:#fff; }
+    #studioCanvas { border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.18); max-width:100%; }
 
     /* Auth wall */
     .auth-wall { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
@@ -709,15 +834,49 @@
             </div>
           </div>
 
-          <!-- Upload area (visual only — future feature) -->
-          <div class="border-2 border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center justify-center gap-4 bg-background hover:bg-surface-container transition-colors cursor-pointer group">
-            <div class="w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-              <span class="material-symbols-outlined text-4xl">cloud_upload</span>
+          <!-- ── Photo Drop Zone (ACTIVE) ── -->
+          <div>
+            <!-- Hidden file input -->
+            <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                   multiple class="hidden" aria-label="Choose photos">
+
+            <!-- Drop Zone -->
+            <div id="photoDropZone" class="p-8 flex flex-col items-center justify-center gap-4" role="button"
+                 aria-label="Drop photos here or click to browse" tabindex="0">
+              <div class="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center text-primary transition-transform group-hover:scale-110">
+                <span class="material-symbols-outlined" style="font-size:36px;">cloud_upload</span>
+              </div>
+              <div class="text-center">
+                <p class="font-headline-md text-on-surface">Drop photos here</p>
+                <p class="font-body-md text-on-surface-variant text-sm mt-1">JPG, PNG, WebP, HEIC — or <span class="text-primary font-semibold">click to browse</span></p>
+                <p class="text-xs text-outline mt-1">Up to 20 photos · Max 5 MB each · Auto-compressed</p>
+              </div>
+              <!-- Counter badge -->
+              <div class="flex items-center gap-2 mt-1">
+                <span id="photoCounter" class="text-xs font-semibold text-primary px-2 py-0.5 bg-primary-fixed/40 rounded-full">0 / 20 photos</span>
+                <span class="text-xs text-outline">• Paste from clipboard supported</span>
+              </div>
             </div>
-            <div class="text-center">
-              <p class="font-headline-md text-on-surface">Drop photos here (coming soon)</p>
-              <p class="font-body-md text-on-surface-variant text-sm">JPG, PNG, HEIC — Max 20 photos</p>
-            </div>
+
+            <!-- Thumbnail Grid -->
+            <div id="photoThumbGrid" class="hidden mt-4 px-1 pb-2"></div>
+          </div>
+
+          <!-- Terms & Conditions Consent -->
+          <div id="consentBox" class="mt-4 p-4 rounded-2xl border border-outline-variant bg-surface-container-low">
+            <label class="flex items-start gap-3 cursor-pointer select-none">
+              <input type="checkbox" id="consentCheckbox" onchange="toggleGenerateBtn()"
+                     class="mt-1 w-4 h-4 accent-primary flex-shrink-0">
+              <span class="text-sm text-on-surface-variant leading-relaxed">
+                I confirm that the customer
+                <strong class="text-on-surface" id="consentDriverName"></strong>
+                has given their <strong class="text-primary">full consent</strong> for their trip details and memories to be processed by Manivtha AI to generate this travel narrative. The narrative will be created solely for personal and promotional purposes with the customer's knowledge and approval.
+                By checking this box, I agree to Manivtha Tours &amp; Travels'
+                <a href="#" onclick="return false;" class="text-primary underline hover:no-underline">Terms &amp; Conditions</a>
+                and
+                <a href="#" onclick="return false;" class="text-primary underline hover:no-underline">Privacy Policy</a>.
+              </span>
+            </label>
           </div>
 
           <div class="pt-4 flex justify-between">
@@ -725,14 +884,15 @@
                     class="text-on-surface-variant px-6 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:bg-surface-container transition-all">
               <span class="material-symbols-outlined">arrow_back</span> Back
             </button>
-            <button type="button" id="generateBtn" onclick="handleGenerate()"
-                    class="bg-secondary-container text-white px-10 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:shadow-lg transition-all active:scale-95">
+            <button type="button" id="generateBtn" onclick="handleGenerate()" disabled
+                    class="bg-secondary-container text-white px-10 py-4 rounded-full font-label-md text-label-md flex items-center gap-2 hover:shadow-lg transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100">
               <span id="generateBtnText">Generate Narrative</span>
               <span class="material-symbols-outlined" id="generateBtnIcon">magic_button</span>
               <div class="hidden w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" id="generateLoader"></div>
             </button>
           </div>
         </section>
+
 
         <!-- ── STEP 3: Narrative Output ── -->
         <section class="step-pane hidden opacity-0 p-8 md:p-12 space-y-8" id="step-3">
@@ -797,6 +957,18 @@
                 <p class="text-on-surface-variant italic">Your narrative will appear here…</p>
               </div>
 
+              <!-- ── Trip Photo Gallery ── -->
+              <div id="narrativePhotoSection" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined ms-filled" style="color:#fe6f42;">photo_library</span>
+                    Your Trip Photos
+                  </h3>
+                  <span class="text-xs text-on-surface-variant bg-surface-container px-3 py-1 rounded-full">Click any photo to edit &amp; share</span>
+                </div>
+                <div id="narrativePhotoGallery"></div>
+              </div>
+
               <!-- Output Extras: Summary & Social Caption -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div class="p-5 bg-surface-container-low rounded-xl border border-outline-variant shadow-sm">
@@ -825,6 +997,17 @@
                 <button onclick="handleRegenerate('Adventurous')"
                         class="flex-1 min-w-[140px] py-3 border border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-primary-fixed transition-colors">
                   Regenerate (Adventurous)
+                </button>
+              </div>
+
+              <!-- Create Social Post CTA -->
+              <div class="p-5 rounded-2xl bg-gradient-to-r from-primary to-secondary-container text-white flex items-center justify-between gap-4 shadow-lg">
+                <div>
+                  <p class="font-headline-md font-bold">✨ Create Social Post</p>
+                  <p class="text-sm opacity-90 mt-0.5">Design a stunning post for Instagram, Twitter &amp; WhatsApp</p>
+                </div>
+                <button onclick="openSocialPostStudio()" class="flex-shrink-0 bg-white text-primary font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-primary-fixed transition-all active:scale-95 shadow-md">
+                  Open Studio
                 </button>
               </div>
 
@@ -910,11 +1093,19 @@
         <h1 class="font-headline-lg text-headline-lg text-on-surface">Your AI Narratives</h1>
         <p class="font-body-lg text-body-lg text-on-surface-variant">Relive your adventures through beautifully curated AI stories.</p>
       </div>
-      <a href="#generate" data-nav="generate"
-         class="bg-secondary-container text-white px-8 py-4 rounded-xl font-label-md text-label-md flex items-center gap-2 shadow-ambient hover:shadow-lg transition-all active:scale-95 self-start md:self-auto">
-        <span class="material-symbols-outlined ms-filled" style="font-size:20px;">add_circle</span>
-        Create New Narrative
-      </a>
+      <div class="flex flex-wrap gap-3 self-start md:self-auto">
+        <button id="downloadProjectBtn"
+                onclick="downloadProjectZip()"
+                class="bg-surface-container text-on-surface border border-outline-variant px-5 py-3 rounded-xl font-label-md text-label-md flex items-center gap-2 hover:shadow-lg hover:border-primary transition-all active:scale-95">
+          <span class="material-symbols-outlined ms-filled" style="font-size:18px;">download</span>
+          Export Project
+        </button>
+        <a href="#generate" data-nav="generate"
+           class="bg-secondary-container text-white px-8 py-4 rounded-xl font-label-md text-label-md flex items-center gap-2 shadow-ambient hover:shadow-lg transition-all active:scale-95">
+          <span class="material-symbols-outlined ms-filled" style="font-size:20px;">add_circle</span>
+          Create New Narrative
+        </a>
+      </div>
     </header>
 
     <!-- Stats Row -->
@@ -1226,23 +1417,333 @@
   </main>
 </div>
 
+
+<!-- ══════════════════════════════════════════════════════
+     PHOTO PREVIEW MODAL
+══════════════════════════════════════════════════════ -->
+<div id="photoPreviewModal" onclick="if(event.target===this)closePhotoPreview()">
+  <div class="relative max-w-3xl w-full mx-4">
+    <img id="photoPreviewImg" src="" alt="Preview" class="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl">
+    <button onclick="closePhotoPreview()"
+            class="absolute top-3 right-3 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center text-xl transition-all">
+      &times;
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PHOTO EDITOR MODAL — 3-Tab AI-Powered Editor
+══════════════════════════════════════════════════════ -->
+<div id="photoEditorModal" onclick="if(event.target===this)closePhotoEditor()">
+  <div id="photoEditorBox">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between p-5 border-b border-outline-variant">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-white" style="font-size:20px;">auto_awesome</span>
+        </div>
+        <div>
+          <h2 class="font-headline-md text-headline-md text-primary">AI Photo Studio</h2>
+          <p class="text-xs text-on-surface-variant">Edit, enhance with AI, generate &amp; share</p>
+        </div>
+      </div>
+      <button onclick="closePhotoEditor()" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-all text-xl">&times;</button>
+    </div>
+
+    <!-- Tab Bar -->
+    <div id="photoEditorTabs" class="flex gap-2 px-5 pt-4 border-b border-outline-variant pb-4">
+      <button id="editorTab-edit"       onclick="switchEditorTab('edit')"       class="active-tab">✏️ Edit</button>
+      <button id="editorTab-ai-enhance" onclick="switchEditorTab('ai-enhance')" class="inactive-tab">🤖 AI Enhance</button>
+      <button id="editorTab-ai-generate" onclick="switchEditorTab('ai-generate')" class="inactive-tab">✨ AI Generate</button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+      <!-- LEFT: Canvas Preview (always visible) -->
+      <div class="space-y-3">
+        <div id="editorPreviewWrapper" class="relative w-full rounded-2xl overflow-hidden bg-surface-container shadow-inner">
+          <img id="editorPreviewImg" src="" alt="Edit preview" class="w-full object-cover" style="min-height:180px; max-height:360px;">
+          <div id="editorTextOverlay"
+               style="display:none; position:absolute; bottom:14px; left:0; right:0; text-align:center;
+                      font-family:'Work Sans',sans-serif; font-size:20px; font-weight:700;
+                      color:#fff; text-shadow:0 2px 8px rgba(0,0,0,0.8); padding:0 14px;"
+               class="pointer-events-none"></div>
+        </div>
+        <!-- Aspect Ratio -->
+        <div class="flex gap-2 flex-wrap">
+          <button class="aspect-chip active" data-aspect="original" onclick="setAspect('original')">Original</button>
+          <button class="aspect-chip" data-aspect="1:1" onclick="setAspect('1:1')">1:1</button>
+          <button class="aspect-chip" data-aspect="4:5" onclick="setAspect('4:5')">4:5</button>
+          <button class="aspect-chip" data-aspect="16:9" onclick="setAspect('16:9')">16:9</button>
+        </div>
+        <!-- Quick actions -->
+        <div class="flex gap-2">
+          <button onclick="downloadEditorPhoto()" class="flex-1 bg-primary text-white py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-primary-container transition-all active:scale-95">
+            <span class="material-symbols-outlined" style="font-size:16px;">download</span> Download
+          </button>
+          <button onclick="closePhotoEditor(); openSocialPostStudio();" class="flex-1 bg-gradient-to-r from-primary to-secondary-container text-white py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-all active:scale-95">
+            <span class="material-symbols-outlined" style="font-size:16px;">post_add</span> Post Studio
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Tab Panes -->
+      <div class="overflow-y-auto" style="max-height:500px;">
+
+        <!-- TAB 1: EDIT -->
+        <div id="editorPane-edit" class="space-y-4">
+          <!-- Filter strip -->
+          <div>
+            <p class="font-label-md text-label-md text-on-surface-variant mb-2">Filters</p>
+            <div id="filterStrip" class="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar"></div>
+          </div>
+
+          <!-- Adjustments -->
+          <div class="space-y-3 pt-3 border-t border-outline-variant">
+            <p class="font-label-md text-label-md text-on-surface-variant">Adjustments</p>
+            <div class="space-y-1">
+              <div class="flex justify-between text-sm"><span class="font-medium">Brightness</span><span id="editorBrightnessVal" class="text-primary font-semibold">100%</span></div>
+              <input type="range" id="editorBrightness" class="editor-slider" min="50" max="150" value="100" oninput="onEditorBrightness(this.value)">
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between text-sm"><span class="font-medium">Contrast</span><span id="editorContrastVal" class="text-primary font-semibold">100%</span></div>
+              <input type="range" id="editorContrast" class="editor-slider" min="50" max="150" value="100" oninput="onEditorContrast(this.value)">
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between text-sm"><span class="font-medium">Saturation</span><span id="editorSaturationVal" class="text-primary font-semibold">100%</span></div>
+              <input type="range" id="editorSaturation" class="editor-slider" min="0" max="200" value="100" oninput="onEditorSaturation(this.value)">
+            </div>
+          </div>
+
+          <!-- Caption Overlay -->
+          <div class="pt-3 border-t border-outline-variant space-y-2">
+            <p class="font-label-md text-label-md text-on-surface-variant">Caption Overlay</p>
+            <input type="text" id="editorTextInput" maxlength="120"
+                   placeholder="e.g. Golden hour at the hills ✨"
+                   class="w-full px-4 py-3 rounded-lg border border-outline-variant focus:border-primary outline-none bg-white text-sm"
+                   oninput="onEditorTextChange(this.value)">
+          </div>
+
+          <!-- Share -->
+          <button onclick="shareEditorPhoto()" class="w-full border border-outline-variant text-on-surface-variant py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-surface-container transition-all">
+            <span class="material-symbols-outlined" style="font-size:16px;">share</span> Share
+          </button>
+        </div>
+
+        <!-- TAB 2: AI ENHANCE -->
+        <div id="editorPane-ai-enhance" style="display:none;" class="space-y-4">
+          <div class="p-4 bg-gradient-to-br from-primary-fixed/40 to-secondary-fixed/20 rounded-2xl border border-primary/20">
+            <p class="text-sm font-semibold text-primary mb-1 flex items-center gap-2">
+              <span class="material-symbols-outlined" style="font-size:18px;">psychology</span>
+              Gemini AI Photo Analysis
+            </p>
+            <p class="text-xs text-on-surface-variant mb-3">AI will analyze your photo and suggest the best filter, generate platform-ready captions, and provide editing tips.</p>
+            <button id="aiAnalyzeBtn" onclick="runAIAnalyze()" class="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary-container transition-all active:scale-95">
+              <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span>
+              Analyze with Gemini AI
+            </button>
+          </div>
+          <!-- Spinner -->
+          <div id="aiAnalyzeSpinner" style="display:none;" class="flex flex-col items-center gap-3 py-8">
+            <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <p class="text-sm text-on-surface-variant">Gemini is analyzing your photo…</p>
+          </div>
+          <!-- Results -->
+          <div id="aiAnalyzeResults"></div>
+        </div>
+
+        <!-- TAB 3: AI GENERATE -->
+        <div id="editorPane-ai-generate" style="display:none;" class="space-y-4">
+          <div class="p-4 bg-gradient-to-br from-secondary-fixed/30 to-primary-fixed/20 rounded-2xl border border-secondary-container/40">
+            <p class="text-sm font-semibold text-primary mb-1 flex items-center gap-2">
+              <span class="material-symbols-outlined" style="font-size:18px;">image</span>
+              Gemini AI Image Generation
+            </p>
+            <p class="text-xs text-on-surface-variant mb-3">Generate a stunning AI travel photo for your narrative. Will be saved to your trip photos.</p>
+            <div class="space-y-3">
+              <input type="text" id="aiGenerateDest" placeholder="Destination (e.g. Coorg, Kerala Backwaters)"
+                     class="w-full px-3 py-2.5 rounded-lg border border-outline-variant focus:border-primary outline-none text-sm">
+              <select id="aiGenerateMood" class="w-full px-3 py-2.5 rounded-lg border border-outline-variant focus:border-primary outline-none text-sm bg-white">
+                <option value="Adventurous">⚡ Adventurous</option>
+                <option value="Serene">🌿 Serene &amp; Peaceful</option>
+                <option value="Golden hour">🌅 Golden Hour</option>
+                <option value="Dramatic">🎭 Dramatic &amp; Moody</option>
+                <option value="Vibrant">🌈 Vibrant &amp; Colorful</option>
+                <option value="Misty">🌫 Misty &amp; Ethereal</option>
+              </select>
+              <textarea id="aiGeneratePrompt" rows="2" maxlength="300"
+                        placeholder="Optional: Describe the scene you want (e.g. 'mountain road with pine trees at sunrise')…"
+                        class="w-full px-3 py-2.5 rounded-lg border border-outline-variant focus:border-primary outline-none text-sm resize-none"></textarea>
+              <button id="aiGenerateBtn" onclick="runAIGenerate()" class="w-full bg-gradient-to-r from-primary to-secondary-container text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95">
+                <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span>
+                Generate AI Image
+              </button>
+            </div>
+          </div>
+
+          <!-- AI Generate Spinner -->
+          <div id="aiGenerateSpinner" style="display:none;" class="flex flex-col items-center gap-3 py-8">
+            <div class="w-12 h-12 border-4 border-secondary-container/20 border-t-secondary-container rounded-full animate-spin"></div>
+            <p class="text-sm text-on-surface-variant">Gemini is painting your scene…</p>
+            <p class="text-xs text-outline">This may take 10–20 seconds</p>
+          </div>
+
+          <!-- Generated Preview -->
+          <div class="space-y-3">
+            <img id="aiGeneratedPreview" src="" alt="AI Generated" style="display:none;"
+                 class="w-full rounded-2xl shadow-lg object-cover" style="max-height:280px;">
+            <div id="aiGeneratedActions" class="hidden flex gap-2">
+              <button onclick="useGeneratedImage()" class="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-primary-container transition-all">
+                <span class="material-symbols-outlined" style="font-size:15px;">edit</span> Use in Editor
+              </button>
+              <button onclick="downloadGeneratedImage()" class="flex-1 border border-outline-variant text-on-surface-variant py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-surface-container transition-all">
+                <span class="material-symbols-outlined" style="font-size:15px;">download</span> Download
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /right pane -->
+    </div><!-- /body -->
+
+  </div><!-- /photoEditorBox -->
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     SOCIAL POST STUDIO MODAL
+══════════════════════════════════════════════════════ -->
+<div id="socialPostStudio" onclick="if(event.target===this)closeSocialPostStudio()">
+  <div id="socialStudioBox">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between p-5 border-b border-outline-variant sticky top-0 bg-white z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-white" style="font-size:20px;">post_add</span>
+        </div>
+        <div>
+          <h2 class="font-headline-md text-headline-md text-primary">Social Post Studio</h2>
+          <p class="text-xs text-on-surface-variant">Design &amp; export posts for Instagram, Twitter, WhatsApp &amp; more</p>
+        </div>
+      </div>
+      <button onclick="closeSocialPostStudio()" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-all text-xl">&times;</button>
+    </div>
+
+    <!-- Platform Tabs -->
+    <div class="p-4 border-b border-outline-variant">
+      <div id="studioPlatformTabs" class="flex gap-2 flex-wrap"></div>
+    </div>
+
+    <!-- Studio Body -->
+    <div class="flex flex-col md:flex-row gap-0 flex-1">
+
+      <!-- LEFT: Canvas Preview -->
+      <div class="md:w-[45%] p-5 border-r border-outline-variant flex flex-col items-center gap-4 bg-surface-container-lowest">
+        <canvas id="studioCanvas" class=""></canvas>
+
+        <!-- Download / Share -->
+        <div class="flex gap-3 w-full">
+          <button onclick="downloadSocialPost()" class="flex-1 bg-primary text-white py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary-container transition-all active:scale-95 shadow-md">
+            <span class="material-symbols-outlined" style="font-size:17px;">download</span> Download PNG
+          </button>
+          <button onclick="shareSocialPost()" class="flex-1 bg-secondary-container text-white py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-md">
+            <span class="material-symbols-outlined" style="font-size:17px;">share</span> Share
+          </button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Controls -->
+      <div class="md:w-[55%] p-5 overflow-y-auto space-y-5" style="max-height:70vh;">
+
+        <!-- Title -->
+        <div class="space-y-1">
+          <label class="font-label-md text-label-md text-on-surface-variant text-xs uppercase tracking-wider">Post Title</label>
+          <input type="text" id="studioTitleInput" placeholder="e.g. Biryani to Baguettes ✈" maxlength="80"
+                 class="w-full px-4 py-3 rounded-xl border border-outline-variant focus:border-primary outline-none text-sm">
+        </div>
+
+        <!-- Caption -->
+        <div class="space-y-1">
+          <label class="font-label-md text-label-md text-on-surface-variant text-xs uppercase tracking-wider">Caption</label>
+          <textarea id="studioCaptionText" rows="3" maxlength="500"
+                    placeholder="Your social media caption…"
+                    class="w-full px-4 py-3 rounded-xl border border-outline-variant focus:border-primary outline-none text-sm resize-none"></textarea>
+          <div class="flex gap-2">
+            <button onclick="copyStudioCaption()" class="text-primary text-xs font-semibold flex items-center gap-1 hover:underline">
+              <span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy caption + hashtags
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Generate Captions -->
+        <div class="p-4 bg-gradient-to-br from-primary-fixed/30 to-secondary-fixed/20 rounded-2xl border border-primary/20">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary" style="font-size:20px;">psychology</span>
+            <p class="font-semibold text-primary text-sm">AI Caption Generator</p>
+          </div>
+          <!-- Loading -->
+          <div id="studioCaptionLoading" class="hidden flex items-center gap-3 py-4">
+            <div class="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <span class="text-sm text-on-surface-variant">Gemini is crafting your captions…</span>
+          </div>
+          <button id="studioGenerateBtn" onclick="generateAICaptions()"
+                  class="w-full bg-primary text-white py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-primary-container transition-all active:scale-95">
+            <span class="material-symbols-outlined" style="font-size:17px;">auto_awesome</span>
+            🤖 Generate AI Captions
+          </button>
+        </div>
+
+        <!-- Caption Results -->
+        <div id="studioCaptionContent" class="hidden space-y-4">
+
+          <!-- Viral Hook -->
+          <div id="studioViralHookBox" class="p-4 bg-surface-container-low rounded-xl border-l-4 border-primary">
+            <p class="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">🎯 Viral Hook</p>
+            <p id="studioViralHook" class="text-sm font-semibold text-on-surface"></p>
+          </div>
+
+          <!-- Best time -->
+          <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+            <span class="material-symbols-outlined" style="font-size:16px;">schedule</span>
+            <span>Best time to post: <b id="studioBestTime" class="text-primary"></b></span>
+          </div>
+
+          <!-- Hashtags -->
+          <div>
+            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Hashtags</p>
+            <div id="studioHashtags" class="flex flex-wrap gap-1"></div>
+          </div>
+
+          <!-- Post Ideas -->
+          <div>
+            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">🎬 Reel / Story Ideas</p>
+            <ul id="studioPostIdeas" class="space-y-2"></ul>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" role="status" aria-live="assertive"></div>
+
+
 
 
 <!-- ══════════════════════════════════════════════════════════
      JAVASCRIPT MODULES  (load order matters)
 ══════════════════════════════════════════════════════════ -->
-<!-- 1. Firebase config (initializes firebaseApp, firebaseAuth, firebaseDb, firebaseStorage) -->
+<!-- 1. App config -->
 <script src="js/config.js"></script>
-<!-- 2. Firebase feature modules -->
-<script src="js/firebase/auth.js"></script>
-<script src="js/firebase/firestore.js"></script>
-<script src="js/firebase/storage.js"></script>
-<script src="js/firebase/index.js"></script>
-<!-- 3. App service layer -->
-<script src="js/services/firebaseService.js"></script>
-<!-- 4. App UI modules -->
+<!-- 2. Auth service (JWT — replaces Firebase) -->
+<script src="js/auth-service.js"></script>
+<!-- 3. App UI modules -->
 <script src="js/auth.js"></script>
 <script src="js/generate.js"></script>
 <script src="js/history.js"></script>
@@ -1250,8 +1751,71 @@
 <script src="js/admin.js"></script>
 <script src="js/tts.js"></script>
 <script src="js/app.js"></script>
-<!-- 5. Auth gate LAST — needs all Firebase modules + services to be ready -->
+<!-- Photo feature modules -->
+<script src="js/photo-dropzone.js"></script>
+<script src="js/photo-editor.js"></script>
+<script src="js/social-post-studio.js"></script>
+<!-- 4. Auth gate LAST -->
 <script src="js/auth-gate.js"></script>
+
+<!-- Export / Download Project Function -->
+<script>
+/**
+ * downloadProjectZip() — Triggers project ZIP download from backend.
+ * Streams the response as a file download.
+ */
+window.downloadProjectZip = async function () {
+  const btn = document.getElementById('downloadProjectBtn');
+  const originalContent = btn ? btn.innerHTML : '';
+
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="material-symbols-outlined animate-spin" style="font-size:18px;">progress_activity</span>
+        Preparing ZIP…
+      `;
+    }
+    showToast('Preparing project ZIP… This may take a moment.', 'info', 4000);
+    console.log('[export] Starting project ZIP download');
+
+    const res = await fetch(`${API_BASE}/export/project`);
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error || `HTTP ${res.status}`);
+    }
+
+    // Get filename from Content-Disposition header or use default
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="?([^";\n]+)"?/);
+    const filename = match ? match[1] : 'manivtha-ai-narrative-project.zip';
+
+    // Stream to Blob and trigger download
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+    console.log(`[export] ZIP downloaded successfully: ${filename} (${sizeMB} MB)`);
+    showToast(`✅ Project exported successfully! (${sizeMB} MB)`, 'success', 4000);
+
+  } catch (e) {
+    console.error('[export] Download failed:', e);
+    showToast(`Export failed: ${e.message}`, 'error', 5000);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalContent;
+    }
+  }
+};
+</script>
 
 </body>
 </html>

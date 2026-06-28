@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login | Manivtha Tours</title>
+  <meta name="description" content="Admin & SuperAdmin login for Manivtha AI Narrative Generator">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Work+Sans:wght@400;500;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+
+  <!-- Auth Service -->
+  <script src="js/auth-service.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:            #003c90;
+      --primary-container:  #0f52ba;
+      --surface:            #0a0e1a;
+      --surface-card:       #111827;
+      --surface-elevated:   #1a2235;
+      --on-surface:         #e8eaf6;
+      --on-surface-variant: #9aa3c2;
+      --outline:            #374151;
+      --outline-variant:    #1f2d40;
+      --error:              #ff6b6b;
+      --error-container:    rgba(186,26,26,0.15);
+      --accent:             #4a90e2;
+      --gold:               #f5a623;
+    }
+
+    body {
+      font-family: 'Work Sans', system-ui, sans-serif;
+      background: var(--surface);
+      color: var(--on-surface);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(74,144,226,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74,144,226,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* Glow orbs */
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; opacity: 0.15;
+    }
+    .orb-1 { width: 500px; height: 500px; background: #003c90; top: -200px; left: -200px; }
+    .orb-2 { width: 400px; height: 400px; background: #4a90e2; bottom: -150px; right: -100px; }
+
+    .login-card {
+      background: var(--surface-card);
+      border: 1px solid var(--outline-variant);
+      border-radius: 24px;
+      padding: 48px 44px;
+      width: 100%; max-width: 440px;
+      position: relative;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.5);
+      animation: slideUp 0.4s ease;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .admin-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.3);
+      color: var(--gold); border-radius: 9999px;
+      padding: 5px 14px; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .login-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 26px; font-weight: 800; color: var(--on-surface);
+      margin-bottom: 6px;
+    }
+    .login-sub {
+      font-size: 14px; color: var(--on-surface-variant);
+      margin-bottom: 32px; line-height: 1.6;
+    }
+
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--on-surface-variant); letter-spacing: 0.06em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .field-wrap { position: relative; }
+    .field-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      font-family: 'Material Symbols Outlined'; font-size: 18px;
+      color: var(--on-surface-variant); pointer-events: none;
+    }
+    .field input {
+      width: 100%; padding: 14px 14px 14px 44px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--outline);
+      border-radius: 12px;
+      font-family: 'Work Sans', sans-serif; font-size: 15px;
+      color: var(--on-surface); outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,144,226,0.15);
+    }
+    .field input::placeholder { color: var(--outline); }
+
+    .pwd-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; padding: 4px;
+      color: var(--on-surface-variant);
+      font-family: 'Material Symbols Outlined'; font-size: 18px; line-height: 1;
+    }
+    .pwd-toggle:hover { color: var(--accent); }
+
+    .submit-btn {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--primary-container), var(--accent));
+      color: #fff; border: none; border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 8px; position: relative; overflow: hidden;
+    }
+    .submit-btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    }
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(74,144,226,0.35);
+    }
+    .submit-btn:active:not(:disabled) { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-alert {
+      background: var(--error-container); border: 1px solid rgba(255,107,107,0.3);
+      color: var(--error); border-radius: 10px;
+      padding: 12px 16px; font-size: 13px; font-weight: 500;
+      display: none; align-items: flex-start; gap: 8px;
+      margin-bottom: 16px; line-height: 1.5;
+    }
+    .error-alert.show { display: flex; }
+    .alert-icon { font-family: 'Material Symbols Outlined'; font-size: 16px; flex-shrink: 0; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .back-link {
+      display: block; text-align: center; margin-top: 24px;
+      color: var(--on-surface-variant); font-size: 13px; text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent); }
+
+    .security-note {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 20px; color: var(--on-surface-variant);
+      font-size: 12px; padding-top: 20px;
+      border-top: 1px solid var(--outline-variant);
+    }
+    .security-note span { font-family: 'Material Symbols Outlined'; font-size: 14px; color: #4caf50; }
+
+    #loadingOverlay {
+      position: fixed; inset: 0; background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .big-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--outline-variant); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay"><div class="big-spinner"></div></div>
+
+<!-- Login Card -->
+<div class="login-card">
+  <div class="admin-badge">
+    <span style="font-family:'Material Symbols Outlined';font-size:14px;">shield</span>
+    Admin Portal
+  </div>
+  <h1 class="login-title">Administration Login</h1>
+  <p class="login-sub">Restricted access. Authorised personnel only.</p>
+
+  <div class="error-alert" id="loginError">
+    <span class="alert-icon">error</span>
+    <span id="loginErrorMsg"></span>
+  </div>
+
+  <form id="adminLoginForm" onsubmit="handleAdminLogin(event)" novalidate>
+    <div class="field">
+      <label for="adminEmail">Email Address</label>
+      <div class="field-wrap">
+        <span class="field-icon">mail</span>
+        <input type="email" id="adminEmail" placeholder="admin@example.com"
+               autocomplete="email" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="adminPassword">Password</label>
+      <div class="field-wrap">
+        <span class="field-icon">lock</span>
+        <input type="password" id="adminPassword" placeholder="••••••••"
+               autocomplete="current-password" required>
+        <button type="button" class="pwd-toggle"
+                onclick="togglePwd()" aria-label="Show/hide password">visibility</button>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="loginBtn">
+      <span id="loginBtnText">Sign In to Admin</span>
+      <div class="spinner" id="loginSpinner"></div>
+    </button>
+  </form>
+
+  <a href="/login.html" class="back-link">← Back to User Login</a>
+
+  <div class="security-note">
+    <span>lock</span>
+    All admin actions are logged and audited.
+  </div>
+</div>
+
+<script>
+const ADMIN_ROLES = ['Admin', 'SuperAdmin'];
+const ADMIN_URL   = '/admin.html';
+const HOME_URL    = '/';
+
+// ── Check existing session ────────────────────────────────────
+(async function init() {
+  const svc = window.AuthService;
+  if (!svc) { document.getElementById('loadingOverlay').style.display = 'none'; return; }
+
+  await new Promise(resolve => {
+    if (svc.isInitialized) { resolve(); return; }
+    const unsub = svc.onAuthChange(() => { unsub(); resolve(); });
+  });
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+
+  const user = svc.currentUser;
+  if (user && ADMIN_ROLES.includes(user.role)) {
+    window.location.replace(ADMIN_URL);
+  }
+})();
+
+// ── Helpers ───────────────────────────────────────────────────
+function togglePwd() {
+  const input = document.getElementById('adminPassword');
+  const btn   = document.querySelector('.pwd-toggle');
+  const show  = input.type === 'password';
+  input.type  = show ? 'text' : 'password';
+  btn.textContent = show ? 'visibility_off' : 'visibility';
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  document.getElementById('loginErrorMsg').textContent = msg;
+  el.classList.add('show');
+}
+function clearError() {
+  document.getElementById('loginError').classList.remove('show');
+}
+function setLoading(loading) {
+  document.getElementById('loginBtn').disabled = loading;
+  document.getElementById('loginSpinner').style.display = loading ? 'block' : 'none';
+  document.getElementById('loginBtnText').textContent   = loading ? '' : 'Sign In to Admin';
+}
+
+// ── Admin Login ───────────────────────────────────────────────
+async function handleAdminLogin(e) {
+  e.preventDefault();
+  clearError();
+  const email    = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  if (!email || !password) { showError('Please enter your email and password.'); return; }
+
+  setLoading(true);
+  try {
+    const user = await window.AuthService.login(email, password);
+    if (!ADMIN_ROLES.includes(user.role)) {
+      // Not admin — logout and reject
+      await window.AuthService.logout();
+      showError('Access denied. This portal is for administrators only.');
+      return;
+    }
+    window.location.replace(ADMIN_URL);
+  } catch (err) {
+    showError(err.message || 'Login failed. Please check your credentials.');
+  } finally {
+    setLoading(false);
+  }
+}
+</script>
+</body>
+</html>

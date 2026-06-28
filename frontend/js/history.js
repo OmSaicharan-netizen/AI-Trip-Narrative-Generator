@@ -47,10 +47,12 @@ window.loadHistory = function () {
 
   // Detach old listener before creating a new one
   detachListener();
+  console.log('[history] Loading My Narratives view');
 
   // Wait for user to be available
   onUserReady((user) => {
     if (!user) { showHistoryEmpty('Sign in to view your narratives.'); return; }
+    console.log(`[history] User ready: ${user.uid} — loading narratives`);
 
     _firestoreAvail = !!(window.FirestoreService && firebaseDb);
 
@@ -58,7 +60,7 @@ window.loadHistory = function () {
       attachFirestoreListener(user.uid);
     } else {
       console.warn('[history] Firestore unavailable — falling back to REST API');
-      fetchHistoryFallback();
+      fetchHistoryFallback(user);
     }
   });
 };
@@ -104,7 +106,7 @@ function attachFirestoreListener(userId) {
                 const tb = b.createdAt?.toMillis?.() || new Date(b.createdAt || 0).getTime();
                 return tb - ta;
               });
-            _narratives = data;
+            _narratives = data.map(normalizeNarrative);
             console.log(`[history] Listener (no-order fallback): ${data.length} narratives`);
             applySearchAndRender();
           },
@@ -139,7 +141,7 @@ function attachFirestoreListener(userId) {
         return;
       }
 
-      _narratives = data;
+      _narratives = data.map(normalizeNarrative);
       console.log(`[history] Real-time update: ${data.length} narratives`);
       applySearchAndRender();
     });
@@ -154,6 +156,7 @@ function applySearchAndRender() {
 
   // Always exclude soft-deleted records from display
   const active = _narratives.filter(r => !r.isDeleted);
+  active.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   _filteredNarratives = q
     ? active.filter(r =>
@@ -342,13 +345,23 @@ function renderCard(rec, i) {
 
 // ── Open narrative in modal — shows ALL generated content ──────────────
 window.openNarrativeModal = function (narrativeId) {
-  // Match by string comparison (data-narrative-id is always a string)
-  const rec = _narratives.find(r => String(r.id) === String(narrativeId));
+  const idStr = String(narrativeId);
 
-  // If not found in Firestore cache, fall back to REST API (SQLite numeric id)
+  // Search by all possible ID fields (Firestore string id, legacyId int, sqliteId)
+  const rec = _narratives.find(r =>
+    String(r.id) === idStr ||
+    String(r.firestoreId || '') === idStr ||
+    String(r.sqliteId || '') === idStr ||
+    String(r.legacyId || '') === idStr
+  );
+
+  console.log(`[history] openNarrativeModal: id=${idStr}, found=${!!rec}`);
+
+  // If not found in cache, fall back to REST API
   if (!rec) {
-    console.warn('[history] openNarrativeModal: id not in cache, falling back to openModal():', narrativeId);
-    const numId = String(narrativeId).replace('sqlite-', '');
+    console.warn('[history] openNarrativeModal: id not in cache, falling back to REST openModal():', idStr);
+    // Strip any prefix and try as integer
+    const numId = idStr.replace('sqlite-', '').replace('fs-', '');
     openModal(numId);
     return;
   }
@@ -403,9 +416,13 @@ window.openNarrativeModal = function (narrativeId) {
   const statusBadge = `<span class="badge ${statusColors[status] || statusColors.active}">${escHtml(status)}</span>`;
 
   // ── Social caption + hashtags ───────────────────────────────
-  const socialCaption = rec.socialCaption || '';
-  // Extract hashtags from the caption
-  const hashtags = socialCaption.match(/#[\w\u0900-\u097F]+/g) || [];
+  const socialCaption = rec.socialCaption ||
+    rec.social_caption ||
+    rec.socialMediaContent?.caption || '';
+  // Extract hashtags from the caption or stored hashtags array
+  const hashtags = rec.hashtags ||
+    rec.socialMediaContent?.hashtags ||
+    (socialCaption.match(/#[\w\u0900-\u097F]+/g) || []);
   const captionText = socialCaption.replace(/#[\w\u0900-\u097F]+/g, '').trim();
 
   // ── Rating stars ───────────────────────────────────────────────
@@ -434,12 +451,108 @@ window.openNarrativeModal = function (narrativeId) {
             <span class="material-symbols-outlined" style="font-size:18px;">play_circle</span> Listen
           </button>
           <button id="modalCopyBtn"
-                  class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-all" title="Copy narrative">
+                  class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-all border border-outline-variant" title="Copy narrative">
             <span class="material-symbols-outlined">content_copy</span>
           </button>
         </div>
       </div>
 
+      <!-- ── Detail grid ─────────────────────────────────────────── -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-outline-variant/60">
+        <!-- Route / Vehicle / Dates info -->
+        <div class="space-y-4 md:col-span-1 bg-surface-container-low p-5 rounded-2xl border border-outline-variant/40">
+          <h4 class="font-label-md text-primary uppercase tracking-wider text-xs">Trip Summary</h4>
+          
+          <div class="space-y-3 font-body-md text-sm text-on-surface-variant">
+            <div class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">trip_origin</span>
+              <div>
+                <p class="font-bold text-xs text-outline">Route</p>
+                <p>${escHtml(rec.routeInfo?.route || rec.route || '—')}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">directions_car</span>
+              <div>
+                <p class="font-bold text-xs text-outline">Vehicle Info</p>
+                <p>${escHtml(rec.vehicleInfo?.type || rec.vehicleType || '—')} (${escHtml(rec.vehicleInfo?.driver || rec.driverName || '—')})</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+              <div>
+                <p class="font-bold text-xs text-outline">Start & Reaching Dates</p>
+                <p>${tripDateFmt ? escHtml(tripDateFmt) : '—'}${rec.reachingDate && rec.reachingDate !== rec.tripDate ? ` to ${escHtml(fmtDate(rec.reachingDate))}` : ''}</p>
+              </div>
+            </div>
+            
+            ${rec.landmarks ? `
+            <div class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">place</span>
+              <div>
+                <p class="font-bold text-xs text-outline">Landmarks</p>
+                <p class="text-xs">${escHtml(rec.landmarks)}</p>
+              </div>
+            </div>` : ''}
+
+            ${rec.highlights ? `
+            <div class="flex items-start gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">star</span>
+              <div>
+                <p class="font-bold text-xs text-outline">Highlights</p>
+                <p class="text-xs">${escHtml(rec.highlights)}</p>
+              </div>
+            </div>` : ''}
+          </div>
+        </div>
+
+        <!-- Narrative body and social content -->
+        <div class="md:col-span-2 space-y-5">
+          <div>
+            <h4 class="font-label-md text-primary uppercase tracking-wider text-xs mb-2">Narrative Story</h4>
+            <div class="narrative-prose p-5 bg-surface-container-lowest rounded-2xl border border-outline-variant/60 max-h-72 overflow-y-auto shadow-inner text-sm font-body-md">
+              ${narrativeHtml || '<p class="text-on-surface-variant">No content generated.</p>'}
+            </div>
+          </div>
+
+          ${captionText ? `
+          <div>
+            <h4 class="font-label-md text-primary uppercase tracking-wider text-xs mb-2">Social Media Caption</h4>
+            <div class="p-4 bg-secondary-container/10 border border-secondary-container/20 rounded-2xl text-xs font-body-md text-on-surface-variant">
+              <p class="mb-2 whitespace-pre-wrap">${escHtml(captionText)}</p>
+              ${hashtags.length ? `
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                ${hashtags.map(h => `<span class="text-primary font-semibold hover:underline cursor-pointer">${escHtml(h)}</span>`).join(' ')}
+              </div>` : ''}
+            </div>
+          </div>` : ''}
+
+          ${rec.imagePrompt ? `
+          <div>
+            <h4 class="font-label-md text-primary uppercase tracking-wider text-xs mb-1">AI Image Generation Prompt</h4>
+            <p class="text-xs text-on-surface-variant bg-surface-container-low px-4 py-3 rounded-xl border border-outline-variant/40 italic font-body-md">
+              "${escHtml(rec.imagePrompt)}"
+            </p>
+          </div>` : ''}
+        </div>
+      </div>
+
+      <!-- ── Trip Photo Gallery (loaded async) ──────────────── -->
+      <div id="modalPhotoSection" class="hidden pt-4 border-t border-outline-variant/60">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="font-label-md text-primary uppercase tracking-wider text-xs flex items-center gap-2">
+            <span class="material-symbols-outlined ms-filled" style="font-size:16px;color:#fe6f42;">photo_library</span>
+            Trip Photos
+          </h4>
+          <span class="text-xs text-on-surface-variant">Click to edit &amp; share on social</span>
+        </div>
+        <div id="modalPhotoGallery"
+             style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px;"></div>
+      </div>
+      
+    </div>`;
 
   // Wire modal buttons safely via addEventListener (no onclick attributes)
   document.getElementById('modalListenBtn')?.addEventListener('click', () => {
@@ -451,47 +564,99 @@ window.openNarrativeModal = function (narrativeId) {
       .catch(() => showToast('Copy failed.', 'error'));
   });
 
+  // Load photos for this narrative (uses sqliteId which is the legacyId integer)
+  const sqliteId = rec?.sqliteId || rec?.legacyId || (typeof rec?.id === 'number' ? rec.id : null);
+  if (sqliteId && window.loadNarrativePhotos) {
+    loadModalPhotos(sqliteId);
+  }
+
+  console.log('[history] Narrative loaded successfully — rendering details for:', rec.title || rec.route);
   modal.classList.add('open');
 };
 
+// ── Load photos into the history detail modal ─────────────────
+async function loadModalPhotos(narrativeId) {
+  if (!narrativeId) return;
+  try {
+    const res  = await fetch(`${window.API_BASE || ''}/api/photos/${narrativeId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.photos || data.photos.length === 0) return;
+
+    const section = document.getElementById('modalPhotoSection');
+    const gallery = document.getElementById('modalPhotoGallery');
+    if (!section || !gallery) return;
+
+    section.classList.remove('hidden');
+    gallery.innerHTML = data.photos.map((p, i) => `
+      <div class="relative group rounded-xl overflow-hidden shadow cursor-pointer"
+           style="aspect-ratio:1; animation: thumbIn 0.3s ease ${i * 0.05}s forwards; opacity:0;">
+        <img src="${p.url}" alt="${p.filename}"
+             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110">
+        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          <button onclick="openPhotoEditor('${p.url}', '${p.filename}', '${p.photoId}')"
+                  class="bg-white/90 text-primary p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 hover:bg-white transition-all">
+            <span class="material-symbols-outlined" style="font-size:14px;">tune</span> Edit
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.warn('[history] Could not load photos for modal:', err.message);
+  }
+}
+
 
 // ── Delete a narrative (soft-delete — record is preserved) ────────────────
-window.deleteNarrativeCard = async function (firestoreId) {
-  const rec = _narratives.find(r => r.id === firestoreId);
+window.deleteNarrativeCard = async function (narrativeId) {
+  const idStr = String(narrativeId);
+  const rec = _narratives.find(r =>
+    String(r.id) === idStr ||
+    String(r.firestoreId || '') === idStr ||
+    String(r.sqliteId || '') === idStr
+  );
   const title = rec ? (rec.title || rec.route || 'this narrative') : 'this narrative';
 
-  // Confirmation dialog — emphasize soft-delete (archiving)
   const confirmed = confirm(
     `Archive "${title}"?\n\nThis will remove the narrative from your list. The record will be preserved and can be recovered if needed.`
   );
   if (!confirmed) return;
 
   // ✔ Immediately hide from UI (optimistic update)
-  _narratives = _narratives.filter(r => r.id !== firestoreId);
+  _narratives = _narratives.filter(r =>
+    String(r.id) !== idStr &&
+    String(r.firestoreId || '') !== idStr &&
+    String(r.sqliteId || '') !== idStr
+  );
   applySearchAndRender();
   showToast('Archiving narrative…', 'info');
 
   let firestoreOk = false;
-  let sqliteOk    = false;
+  let mongoOk     = false;
   const errors    = [];
 
-  // 1️⃣  Soft-delete in Firestore (sets isDeleted: true, preserves document)
-  try {
-    const { error } = await FirestoreService.deleteNarrative(firestoreId);
-    if (error) throw new Error(error);
-    firestoreOk = true;
-    console.log(`[history] Firestore soft-delete OK: ${firestoreId}`);
-  } catch (e) {
-    console.error('[history] Firestore soft-delete failed:', e.message);
-    errors.push(`Firestore: ${e.message}`);
+  // 1️⃣  Soft-delete in Firestore
+  const fsId = rec?.firestoreId || (typeof rec?.id === 'string' && !rec?.id.match(/^\d+$/) ? rec.id : null);
+  if (fsId && window.FirestoreService) {
+    try {
+      const { error } = await FirestoreService.deleteNarrative(fsId);
+      if (error) throw new Error(error);
+      firestoreOk = true;
+      console.log(`[history] Firestore soft-delete OK: ${fsId}`);
+    } catch (e) {
+      console.error('[history] Firestore soft-delete failed:', e.message);
+      errors.push(`Firestore: ${e.message}`);
+    }
+  } else {
+    firestoreOk = true; // no Firestore record to delete
   }
 
-  // 2️⃣  Soft-delete from SQLite via authenticated backend DELETE
-  const sqliteId = rec?.sqliteId ?? null;
-  if (sqliteId) {
+  // 2️⃣  Soft-delete from MongoDB via authenticated backend DELETE
+  const legacyId = rec?.sqliteId || rec?.legacyId || (typeof rec?.id === 'number' ? rec.id : null);
+  if (legacyId) {
     try {
       const token = await window.getIdToken?.();
-      const res = await fetch(`${API_BASE}/history/${sqliteId}`, {
+      const res = await fetch(`${API_BASE}/history/${legacyId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -500,26 +665,24 @@ window.deleteNarrativeCard = async function (firestoreId) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      sqliteOk = true;
-      console.log(`[history] SQLite soft-delete OK: sqliteId=${sqliteId}`);
+      mongoOk = true;
+      console.log(`[history] MongoDB soft-delete OK: legacyId=${legacyId}`);
     } catch (e) {
-      console.error('[history] SQLite soft-delete failed:', e.message);
+      console.error('[history] MongoDB soft-delete failed:', e.message);
       errors.push(`Database: ${e.message}`);
     }
   } else {
-    console.warn('[history] No sqliteId found on record — skipping SQLite soft-delete');
-    sqliteOk = true; // nothing to archive in SQLite
+    mongoOk = true; // no MongoDB record to delete
   }
 
   // 3️⃣  Final toast
-  if (firestoreOk || sqliteOk) {
+  if (firestoreOk || mongoOk) {
     if (errors.length) {
       showToast(`Narrative archived (partial — ${errors.join('; ')})`, 'info');
     } else {
       showToast('Narrative archived successfully.', 'success');
     }
   } else {
-    // Undo optimistic removal if both failed
     if (rec) _narratives.unshift(rec);
     applySearchAndRender();
     showToast(`Archive failed: ${errors.join('; ')}`, 'error');
@@ -591,36 +754,45 @@ window.histPageChange = function (p) {
 };
 
 // ── REST API fallback ─────────────────────────────────────────
-async function fetchHistoryFallback() {
+// Called with optional user object for authenticated requests
+async function fetchHistoryFallback(user) {
   showHistoryLoading();
-  console.log('[history] Fetching via REST fallback…');
+  console.log('[history] Fetching via REST fallback (MongoDB)…');
+
   try {
-    const params = new URLSearchParams({ page: 1, limit: 50 });
-    const res  = await fetch(`${API_BASE}/history?${params}`);
+    // Try to get the auth token for user-scoped request
+    let token = null;
+    try {
+      if (user && user.getIdToken) {
+        token = await user.getIdToken();
+      } else if (window.currentUser && window.currentUser.getIdToken) {
+        token = await window.currentUser.getIdToken();
+      } else if (window.getIdToken) {
+        token = await window.getIdToken();
+      }
+    } catch (tokenErr) {
+      console.warn('[history] Could not get ID token for REST fallback:', tokenErr.message);
+    }
+
+    const params = new URLSearchParams({ page: 1, limit: 100 });
+
+    // Use /my endpoint if we have a token (filters by userId), else use generic
+    const endpoint = token
+      ? `${API_BASE}/history/my?${params}`
+      : `${API_BASE}/history?${params}`;
+
+    console.log(`[history] Fetching from ${token ? '/my (authenticated)' : '/ (public)'}`);
+
+    const res = await fetch(endpoint, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
 
-    // Support both "records" (new) and "data" (old) key names
     const rows = json.records || json.data || [];
-    console.log(`[history] REST fallback: received ${rows.length} records (total=${json.pagination?.total ?? '?'})`);
+    console.log(`[history] Fetching user narratives: received ${rows.length} records (total=${json.pagination?.total ?? '?'})`);
 
-    _narratives = rows.map(r => ({
-      id:          `sqlite-${r.id}`,
-      sqliteId:    r.id,
-      driverName:  r.driver_name,
-      route:       r.route,
-      landmarks:   r.landmarks,
-      highlights:  r.highlights,
-      tripDate:    r.trip_date,
-      vehicleType: r.vehicle_type,
-      tone:        r.tone,
-      title:       r.title,
-      narrative:   r.ai_response || r.narrative,
-      rating:      r.rating,
-      comment:     r.comment,
-      createdAt:   r.created_at,
-    }));
-
+    _narratives = rows.map(normalizeNarrative);
     applySearchAndRender();
   } catch (e) {
     console.error('[history] REST fallback error:', e.message);

@@ -267,26 +267,29 @@ window.FirestoreService = (() => {
    * Called after successful generation.
    */
   async function saveNarrative(narrativeData) {
+    const finalSocialCaption = narrativeData.socialCaption || narrativeData.social_caption || "";
+    const hashtags = narrativeData.hashtags || (finalSocialCaption.match(/#[\w\u0900-\u097F]+/g) || []);
+
     return createDocument('narratives', {
       // Core identification
-      driverName:       narrativeData.driverName       || null,
+      driverName:       narrativeData.driverName       || narrativeData.driver_name || null,
       route:            narrativeData.route            || null,
-      startingLocation: narrativeData.startingLocation || null,
+      startingLocation: narrativeData.startingLocation || narrativeData.starting_location || null,
       destination:      narrativeData.destination      || null,
       // Trip details
       landmarks:        narrativeData.landmarks        || null,
       highlights:       narrativeData.highlights       || null,
-      tripDate:         narrativeData.tripDate         || null,
-      vehicleType:      narrativeData.vehicleType      || 'Sedan',
+      tripDate:         narrativeData.tripDate         || narrativeData.trip_date || null,
+      vehicleType:      narrativeData.vehicleType      || narrativeData.vehicle_type || 'Sedan',
       // Style
       tone:             narrativeData.tone             || narrativeData.mood || 'Adventurous',
       mood:             narrativeData.mood             || narrativeData.tone || 'Adventurous',
       style:            narrativeData.style            || 'Adventure',
       // Generated content
       title:            narrativeData.title            || null,
-      narrative:        narrativeData.narrative        || null,
+      narrative:        narrativeData.narrative        || narrativeData.ai_response || null,
       summary:          narrativeData.summary          || null,
-      socialCaption:    narrativeData.socialCaption    || null,
+      socialCaption:    finalSocialCaption,
       // Quality metrics
       wordCount:        narrativeData.wordCount        || null,
       charCount:        narrativeData.charCount        || null,
@@ -301,6 +304,26 @@ window.FirestoreService = (() => {
       // Rating (filled in later)
       rating:           null,
       comment:          null,
+
+      // Audited fields
+      socialMediaContent: narrativeData.socialMediaContent || {
+        caption: finalSocialCaption,
+        hashtags: hashtags
+      },
+      hashtags:          hashtags,
+      imagePrompt:       narrativeData.imagePrompt || `A scenic travel photograph of a road trip from ${narrativeData.startingLocation || narrativeData.starting_location || ''} to ${narrativeData.destination || narrativeData.route || ''}`,
+      vehicleInfo:       narrativeData.vehicleInfo || {
+        type: narrativeData.vehicleType || narrativeData.vehicle_type || 'Sedan',
+        driver: narrativeData.driverName || narrativeData.driver_name || 'Unknown'
+      },
+      routeInfo:         narrativeData.routeInfo || {
+        startingLocation: narrativeData.startingLocation || narrativeData.starting_location || '',
+        destination: narrativeData.destination || '',
+        route: narrativeData.route || '',
+        landmarks: narrativeData.landmarks || ''
+      },
+      startDate:         narrativeData.startDate || narrativeData.tripDate || narrativeData.trip_date || "",
+      reachingDate:      narrativeData.reachingDate || narrativeData.tripDate || narrativeData.trip_date || ""
     });
   }
 

@@ -121,7 +121,7 @@ function initMobileMenu() {
   });
 }
 
-// ── Trending Stories on Landing Page ─────────────────────────
+// ── Trending / Recent Narratives on Landing Page ─────────────
 window.loadTrendingStories = async function () {
   const grid = document.getElementById('trendingGrid');
   if (!grid) return;
@@ -131,9 +131,24 @@ window.loadTrendingStories = async function () {
   ).join('');
 
   try {
-    const res  = await fetch(`${API_BASE}/history?limit=6`);
+    // Try to use auth token to get user-specific recent narratives
+    let token = null;
+    try {
+      if (window.currentUser && window.currentUser.getIdToken) {
+        token = await window.currentUser.getIdToken();
+      } else if (window.getIdToken) {
+        token = await window.getIdToken();
+      }
+    } catch (_) {}
+
+    const endpoint = token
+      ? `${API_BASE}/history/my?limit=6`
+      : `${API_BASE}/history?limit=6`;
+
+    const fetchOpts = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    const res  = await fetch(endpoint, fetchOpts);
     const json = await res.json();
-    const list = (json.records || []).slice(0, 3);
+    const list = (json.records || json.data || []).slice(0, 3);
 
     if (!list.length) {
       grid.innerHTML = `<div class="col-span-3 text-center py-16 text-on-surface-variant font-body-md">
@@ -148,11 +163,14 @@ window.loadTrendingStories = async function () {
     grid.innerHTML = list.map((rec, i) => {
       const img = TOUR_IMAGES[i % TOUR_IMAGES.length];
       const tone = rec.tone || 'Adventurous';
-      const excerpt = (rec.narrative || rec.title || '').replace(/#+\s*/g, '').slice(0, 120) + '…';
+      // Normalize narrative for excerpt
+      const narrativeText = rec.narrative || rec.ai_response || rec.aiResponse || rec.body || rec.content || '';
+      const excerpt = (narrativeText || rec.title || '').replace(/#+\s*/g, '').slice(0, 120) + '…';
       const stars = rec.rating ? '★'.repeat(rec.rating) : '';
+      const narrativeId = rec.id || rec.legacyId;
       return `
-        <div class="bg-white rounded-3xl overflow-hidden shadow-ambient group hover:shadow-ambient-lg transition-all cursor-pointer"
-             onclick="openModal(${rec.id})">
+        <div class="bg-white rounded-3xl overflow-hidden shadow-ambient group hover:shadow-ambient-lg transition-all cursor-pointer border border-outline-variant"
+             onclick="openModal(${narrativeId})">
           <div class="relative h-52 overflow-hidden">
             <img src="${img}" alt="${rec.route || 'Trip'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
             <div class="absolute top-4 left-4 glass-card px-3 py-1 rounded-full text-xs font-bold text-primary">
@@ -165,7 +183,7 @@ window.loadTrendingStories = async function () {
             <p class="text-on-surface-variant text-sm line-clamp-2 mb-4">${escHtml(excerpt)}</p>
             <div class="flex items-center justify-between">
               <span class="text-xs text-outline font-label-md">
-                ${rec.driver_name ? '👤 ' + escHtml(rec.driver_name) : ''}
+                ${rec.driver_name || rec.driverName ? '👤 ' + escHtml(rec.driver_name || rec.driverName) : ''}
               </span>
               <span class="text-primary font-label-md text-sm flex items-center gap-1">
                 Read <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
@@ -197,6 +215,7 @@ window.openModal = async function (id) {
   const body  = document.getElementById('modalBody');
   if (!modal || !body) return;
 
+  console.log(`[app] openModal: id=${id}`);
   body.innerHTML = '<div class="flex justify-center py-16"><div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>';
   modal.classList.add('open');
 
@@ -206,28 +225,61 @@ window.openModal = async function (id) {
     if (!res.ok) throw new Error(json.error || 'Not found');
 
     const r = json.record || json;
-    const narrativeHtml = (r.narrative || r.body || '').split('\n').map(line =>
+
+    // Normalize narrative text — check ALL possible field names
+    const narrativeText =
+      r.narrative ||
+      r.ai_response ||
+      r.aiResponse ||
+      r.body ||
+      r.content ||
+      r.story ||
+      r.generatedNarrative ||
+      r.generatedText ||
+      r.description ||
+      '';
+
+    console.log(`[app] openModal: title="${r.title || r.route}", narrativeLength=${narrativeText.length} chars`);
+
+    if (!narrativeText) {
+      console.warn('[app] openModal: No narrative content found in record. Fields available:', Object.keys(r).join(', '));
+    }
+
+    const narrativeHtml = narrativeText.split('\n').map(line =>
       line.startsWith('#') ? `<h2 class="font-headline-md text-headline-md text-primary mt-6 mb-3">${escHtml(line.replace(/#+\s*/, ''))}</h2>`
       : line.trim() ? `<p class="font-body-md text-body-md text-on-surface-variant mb-3 leading-relaxed">${escHtml(line)}</p>` : ''
     ).join('');
+
+    // Normalize other fields
+    const title = r.title || r.route || 'Untitled Journey';
+    const driverName = r.driver_name || r.driverName || '';
+    const route = r.route || '';
+    const tone = r.tone || '';
+    const vehicleType = r.vehicle_type || r.vehicleType || '';
+    const landmarks = r.landmarks || '';
+    const tripDate = r.trip_date || r.tripDate || '';
+    const summary = r.summary || '';
+    const socialCaption = r.social_caption || r.socialCaption || r.socialMediaContent?.caption || '';
+    const hashtags = r.hashtags || r.socialMediaContent?.hashtags || (socialCaption.match(/#[\w\u0900-\u097F]+/g) || []);
+    const imagePrompt = r.imagePrompt || '';
 
     body.innerHTML = `
       <div class="space-y-6">
         <div class="flex items-start justify-between">
           <div>
-            <h2 class="font-headline-lg text-headline-lg text-primary mb-1">${escHtml(r.title || r.route || 'Untitled')}</h2>
+            <h2 class="font-headline-lg text-headline-lg text-primary mb-1">${escHtml(title)}</h2>
             <p class="text-sm text-on-surface-variant font-label-md">
-              ${r.driver_name ? '👤 ' + escHtml(r.driver_name) + ' · ' : ''}
-              ${r.route ? '🗺️ ' + escHtml(r.route) + ' · ' : ''}
-              ${r.tone ? escHtml(r.tone) : ''}
+              ${driverName ? '👤 ' + escHtml(driverName) + ' · ' : ''}
+              ${route ? '햤️ ' + escHtml(route) + ' · ' : ''}
+              ${tone ? escHtml(tone) : ''}
             </p>
           </div>
           <div class="flex gap-2">
-            <button onclick="window.TTS.load(${JSON.stringify(r.narrative || r.body || '')}); window.TTS.speak(${JSON.stringify(r.narrative || r.body || '')}); showToast('Playing narration…', 'info')"
+            <button onclick="window.TTS?.load(${JSON.stringify(narrativeText)}); window.TTS?.speak(${JSON.stringify(narrativeText)}); showToast('Playing narration…', 'info')"
                     class="flex items-center gap-1 px-4 py-2 bg-primary text-white rounded-full text-sm font-label-md hover:bg-primary-container transition-all">
               <span class="material-symbols-outlined" style="font-size:18px;">play_circle</span> Listen
             </button>
-            <button onclick="navigator.clipboard?.writeText(${JSON.stringify(r.narrative || r.body || '')}); showToast('Copied!', 'success')"
+            <button onclick="navigator.clipboard?.writeText(${JSON.stringify(narrativeText)}); showToast('Copied!', 'success')"
                     class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-all" title="Copy">
               <span class="material-symbols-outlined">content_copy</span>
             </button>
@@ -235,21 +287,40 @@ window.openModal = async function (id) {
         </div>
 
         ${r.rating ? `<div class="flex items-center gap-2">
-          <span class="text-secondary-container text-xl">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+          <span class="text-secondary-container text-xl">${'★'.repeat(r.rating)+'\u2606'.repeat(5 - r.rating)}</span>
           ${r.comment ? `<span class="text-sm text-on-surface-variant italic">"${escHtml(r.comment)}"</span>` : ''}
         </div>` : ''}
 
+        ${summary ? `<div class="p-4 bg-surface-container-low rounded-xl border border-outline-variant/40">
+          <h4 class="font-label-md text-xs text-primary uppercase tracking-wider mb-2">Summary</h4>
+          <p class="text-sm text-on-surface-variant">${escHtml(summary)}</p>
+        </div>` : ''}
+
         <div class="narrative-prose p-6 bg-surface rounded-xl border border-outline-variant max-h-96 overflow-y-auto">
-          ${narrativeHtml || '<p class="text-on-surface-variant">No narrative content.</p>'}
+          ${narrativeHtml || '<p class="text-on-surface-variant text-sm">No narrative content found.</p>'}
         </div>
 
+        ${socialCaption ? `<div class="p-4 bg-secondary-container/10 border border-secondary-container/20 rounded-xl">
+          <h4 class="font-label-md text-xs text-primary uppercase tracking-wider mb-2">Social Media Caption</h4>
+          <p class="text-xs text-on-surface-variant whitespace-pre-wrap">${escHtml(socialCaption.replace(/#[\w\u0900-\u097F]+/g, '').trim())}</p>
+          ${hashtags.length ? `<div class="flex flex-wrap gap-1 mt-2">${hashtags.map(h => `<span class="text-primary font-semibold text-xs">${escHtml(h)}</span>`).join(' ')}</div>` : ''}
+        </div>` : ''}
+
+        ${imagePrompt ? `<div>
+          <h4 class="font-label-md text-xs text-primary uppercase tracking-wider mb-1">AI Image Prompt</h4>
+          <p class="text-xs text-on-surface-variant italic px-4 py-3 bg-surface-container-low rounded-xl border border-outline-variant/40">"${escHtml(imagePrompt)}"</p>
+        </div>` : ''}
+
         <div class="flex flex-wrap gap-3 pt-2">
-          ${r.landmarks ? `<div class="text-xs text-outline font-label-md">📍 ${escHtml(r.landmarks)}</div>` : ''}
-          ${r.vehicle_type ? `<div class="text-xs text-outline font-label-md">🚗 ${escHtml(r.vehicle_type)}</div>` : ''}
-          ${r.trip_date ? `<div class="text-xs text-outline font-label-md">📅 ${new Date(r.trip_date).toLocaleDateString()}</div>` : ''}
+          ${landmarks ? `<div class="text-xs text-outline font-label-md">📍 ${escHtml(landmarks)}</div>` : ''}
+          ${vehicleType ? `<div class="text-xs text-outline font-label-md">🚗 ${escHtml(vehicleType)}</div>` : ''}
+          ${tripDate ? `<div class="text-xs text-outline font-label-md">📅 ${new Date(tripDate).toLocaleDateString()}</div>` : ''}
         </div>
       </div>`;
+
+    console.log('[app] Navigation successful — narrative modal rendered');
   } catch (e) {
+    console.error('[app] openModal error:', e);
     body.innerHTML = `<p class="text-error font-body-md">Error loading narrative: ${escHtml(e.message)}</p>`;
   }
 };

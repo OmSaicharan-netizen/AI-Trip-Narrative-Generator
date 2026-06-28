@@ -12,13 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Work+Sans:wght@400;500;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
 
-  <!--
-    Firebase compat SDK v10
-    CRITICAL: These must load before the inline <script> below.
-    Both app and auth are required for authentication.
-  -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <!-- Auth Service (JWT — no Firebase) -->
+  <script src="js/auth-service.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,27 +132,6 @@
     .form-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 700; color: var(--on-surface); margin-bottom: 6px; }
     .form-sub { font-size: 14px; color: var(--on-surface-variant); margin-bottom: 24px; line-height: 1.5; }
 
-    /* ── Google Button ── */
-    .google-btn {
-      width: 100%; display: flex; align-items: center; justify-content: center;
-      gap: 12px; padding: 13px 20px;
-      border: 1.5px solid var(--outline-variant); border-radius: 12px;
-      background: #fff; font-family: 'Work Sans', sans-serif;
-      font-size: 15px; font-weight: 600; color: var(--on-surface);
-      cursor: pointer; transition: all 0.2s; margin-bottom: 20px;
-    }
-    .google-btn:hover { background: var(--surface-low); border-color: var(--primary); }
-    .google-btn:active { transform: scale(0.98); }
-    .google-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    /* ── Divider ── */
-    .divider {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 20px; color: var(--outline); font-size: 13px;
-    }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--outline-variant);
-    }
 
     /* ── Fields ── */
     .field { margin-bottom: 16px; }
@@ -261,9 +235,8 @@
   <div class="auth-logo">Manivtha Tours</div>
 
   <!-- Tabs -->
-  <div class="tabs" id="tabBar">
-    <button class="tab-btn active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
-    <button class="tab-btn"        id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
+  <div class="tabs" id="tabBar" style="pointer-events:none;">
+    <button class="tab-btn active" id="tabSignIn">Sign In</button>
   </div>
 
   <!-- ── SIGN IN ── -->
@@ -276,17 +249,6 @@
       <span id="signinErrorMsg"></span>
     </div>
 
-    <button class="google-btn" id="googleBtn" onclick="handleGoogleSignIn()" aria-label="Sign in with Google">
-      <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
-        <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-        <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
-        <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
-        <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/>
-      </svg>
-      Continue with Google
-    </button>
-
-    <div class="divider">or sign in with email</div>
 
     <form id="signinForm" onsubmit="handleEmailSignIn(event)" novalidate>
       <div class="field">
@@ -318,66 +280,6 @@
     </form>
   </div>
 
-  <!-- ── SIGN UP ── -->
-  <div class="form-panel" id="panelSignUp">
-    <h2 class="form-title">Create your account</h2>
-    <p class="form-sub">Join Manivtha Tours and start generating AI travel stories.</p>
-
-    <div class="error-alert" id="signupError">
-      <span class="alert-icon">error</span>
-      <span id="signupErrorMsg"></span>
-    </div>
-    <div class="success-alert" id="signupSuccess">
-      <span class="alert-icon">check_circle</span>
-      <span>Account created! Signing you in…</span>
-    </div>
-
-    <button class="google-btn" onclick="handleGoogleSignIn()" aria-label="Sign up with Google">
-      <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
-        <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-        <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
-        <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
-        <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/>
-      </svg>
-      Sign up with Google
-    </button>
-
-    <div class="divider">or sign up with email</div>
-
-    <form id="signupForm" onsubmit="handleSignUp(event)" novalidate>
-      <div class="field">
-        <label for="signupName">Full name</label>
-        <div class="field-wrap">
-          <span class="field-icon">person</span>
-          <input type="text" id="signupName" placeholder="Your full name"
-                 autocomplete="name" required>
-        </div>
-      </div>
-      <div class="field">
-        <label for="signupEmail">Email address</label>
-        <div class="field-wrap">
-          <span class="field-icon">mail</span>
-          <input type="email" id="signupEmail" placeholder="you@example.com"
-                 autocomplete="email" required>
-        </div>
-      </div>
-      <div class="field">
-        <label for="signupPassword">Password <span style="color:var(--outline);font-weight:400;">(min. 6 chars)</span></label>
-        <div class="field-wrap">
-          <span class="field-icon">lock</span>
-          <input type="password" id="signupPassword" placeholder="Create a password"
-                 autocomplete="new-password" required minlength="6">
-          <button type="button" class="pwd-toggle"
-                  onclick="togglePwd('signupPassword',this)"
-                  aria-label="Show or hide password">visibility</button>
-        </div>
-      </div>
-      <button type="submit" class="submit-btn" id="signupBtn">
-        <span id="signupBtnText">Create Account</span>
-        <div class="spinner" id="signupSpinner"></div>
-      </button>
-    </form>
-  </div>
 
   <!-- ── FORGOT PASSWORD ── -->
   <div id="forgotPanel">
@@ -415,531 +317,151 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  FIREBASE INITIALIZATION — login.html
+//  JWT AUTHENTICATION — login.html
 // ═══════════════════════════════════════════════════════════════
 
-const FIREBASE_CONFIG = {
-  apiKey:            'AIzaSyDVKDd6r-96ewW3dBBxEmF7VsvONifazBs',
-  authDomain:        'ai-trip-narrative-generator.firebaseapp.com',
-  projectId:         'ai-trip-narrative-generator',
-  storageBucket:     'ai-trip-narrative-generator.firebasestorage.app',
-  messagingSenderId: '70632204810',
-  appId:             '1:70632204810:web:da3e6a8fb1efb9741b8df3',
-  measurementId:     'G-Z1CDCVMX8K',
-};
+const HOME_URL  = '/';
+const ADMIN_URL = '/admin.html';
 
-const APP_URL    = '/';
-const INIT_LOG   = [];
-
-let fbApp  = null;
-let fbAuth = null;
-let authReady = false;
-
-// ── Diagnostic logger ────────────────────────────────────────
-function diag(level, msg) {
-  const entry = `[login][${level.toUpperCase()}] ${msg}`;
-  INIT_LOG.push(entry);
-  if (level === 'error') console.error(entry);
-  else if (level === 'warn') console.warn(entry);
-  else console.log(entry);
+function getRedirectUrl(user) {
+  if (user && (user.role === 'Admin' || user.role === 'SuperAdmin')) return ADMIN_URL;
+  return HOME_URL;
 }
 
-// ── Show config error banner ─────────────────────────────────
-function showConfigError(msg) {
-  const banner = document.getElementById('configErrorBanner');
-  if (banner) { banner.textContent = msg; banner.classList.add('show'); }
-  // Hide loading overlay so form is still usable (for email fallback)
-  hideLoading();
-  diag('error', msg);
-}
-
-// ── Loading overlay ──────────────────────────────────────────
-function showLoading(msg) {
-  const overlay = document.getElementById('loadingOverlay');
-  const text    = document.getElementById('loadingText');
-  if (overlay) overlay.style.display = 'flex';
-  if (text && msg) text.textContent = msg;
-}
-function hideLoading() {
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) overlay.style.display = 'none';
-}
-
-// ── Validate Firebase SDK is available ───────────────────────
-function checkFirebaseSDK() {
-  if (typeof firebase === 'undefined') {
-    showConfigError('⚠️ Firebase SDK failed to load. Check your internet connection and try refreshing.');
-    return false;
-  }
-  diag('info', 'Firebase SDK loaded ✅');
-  return true;
-}
-
-// ── Initialize Firebase ──────────────────────────────────────
-function initFirebase() {
-  if (!checkFirebaseSDK()) return false;
-
-  diag('info', 'Initializing Firebase…');
-
-  try {
-    // Re-use existing app to prevent "duplicate app" error
-    try {
-      fbApp = firebase.app();
-      diag('info', 'Re-used existing Firebase app');
-    } catch (_) {
-      fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-      diag('info', 'Firebase app created — project: ' + FIREBASE_CONFIG.projectId);
-    }
-
-    if (!fbApp) throw new Error('firebase.initializeApp() returned null');
-
-    // Initialize Auth
-    fbAuth = firebase.auth(fbApp);
-    if (!fbAuth) throw new Error('firebase.auth() returned null');
-    diag('info', 'Firebase Auth initialized ✅');
-
-    // Session persistence
-    fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .then(() => diag('info', 'Auth persistence set to LOCAL'))
-      .catch(e => diag('warn', 'setPersistence failed: ' + e.message));
-
-    return true;
-
-  } catch (e) {
-    diag('error', 'Firebase init FAILED: ' + e.message);
-    showConfigError('⚠️ Authentication service failed to initialize: ' + e.message);
-    return false;
-  }
-}
-
-// ── Check current session ─────────────────────────────────────
-function checkSession() {
-  if (!fbAuth) {
-    hideLoading();
-    return;
-  }
-
-  diag('info', 'Checking existing session…');
-
-  // Safety timeout: if onAuthStateChanged never fires, show the form
-  const safetyTimer = setTimeout(() => {
-    diag('warn', 'onAuthStateChanged did not fire within 6s — showing login form');
-    hideLoading();
-  }, 6000);
-
-  fbAuth.onAuthStateChanged((user) => {
-    clearTimeout(safetyTimer);
-    authReady = true;
-
-    if (user) {
-      diag('info', `Session found: ${user.email} (${user.uid}) — redirecting to app`);
-      showLoading('Signing you in…');
-      window.location.replace(APP_URL);
-    } else {
-      diag('info', 'No session found — showing login form');
-      hideLoading();
-    }
+// ── Redirect if already signed in ──────────────────────────────
+(async function checkSession() {
+  const svc = window.AuthService;
+  if (!svc) return hideLoading();
+  // Wait for init
+  await new Promise(resolve => {
+    if (svc.isInitialized) { resolve(); return; }
+    const unsub = svc.onAuthChange(() => { unsub(); resolve(); });
   });
-}
-
-// ── Error code → human message ───────────────────────────────
-function mapError(code, fallback) {
-  const MAP = {
-    'auth/email-already-in-use':   'An account with this email already exists. Try signing in.',
-    'auth/invalid-email':          'Please enter a valid email address.',
-    'auth/weak-password':          'Password must be at least 6 characters.',
-    'auth/user-not-found':         'No account found with this email. Check or sign up.',
-    'auth/wrong-password':         'Incorrect password. Please try again.',
-    'auth/invalid-credential':     'Invalid email or password. Please try again.',
-    'auth/too-many-requests':      'Too many attempts. Please wait a few minutes and try again.',
-    'auth/network-request-failed': 'Network error. Check your internet connection.',
-    'auth/user-disabled':          'This account has been disabled. Contact support.',
-    'auth/operation-not-allowed':  'This sign-in method is not enabled. Contact support.',
-    'auth/popup-closed-by-user':    '',   // Silent — user cancelled
-    'auth/popup-blocked':           'Popup was blocked. Please allow popups for this site and try again.',
-    'auth/cancelled-popup-request': '',
-    'auth/requires-recent-login':   'Please sign out and sign back in to continue.',
-    // ── This error means the provider is NOT enabled in Firebase Console ──
-    'auth/configuration-not-found': '⚙️ Google Sign-In is not enabled in Firebase Console.\n\nFix: Go to Firebase Console → Authentication → Sign-in method → Enable Google.',
-    'auth/internal-error':          'Authentication service error. Please try again in a moment.',
-    'auth/app-not-authorized':      'This app is not authorized. Check Firebase Console → Authentication → Authorized domains and add localhost.',
-  };
-
-  // Special case: show a rich setup message for config errors
-  if (code === 'auth/configuration-not-found' || code === 'auth/operation-not-allowed') {
-    showSetupGuide();
-    return '';
-  }
-
-  return MAP[code] !== undefined ? MAP[code] : (fallback || `Authentication failed (${code}). Please try again.`);
-}
-
-// ── Error / success display ───────────────────────────────────
-function showError(containerId, msgId, msg) {
-  const el = document.getElementById(containerId);
-  const tx = document.getElementById(msgId);
-  if (!el || !msg) return;
-  if (tx) tx.textContent = msg;
-  el.classList.add('show');
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-function clearErrors() {
-  document.querySelectorAll('.error-alert,.success-alert')
-    .forEach(el => el.classList.remove('show'));
-}
-
-// ── Setup guide (shown when Firebase providers not enabled) ───
-function showSetupGuide() {
-  // Hide any previous error
-  clearErrors();
-  // Show the setup modal
-  const modal = document.getElementById('setupGuideModal');
-  if (modal) modal.style.display = 'flex';
-}
-
-// ── Loading state ─────────────────────────────────────────────
-function setBusy(btnId, spinnerId, textId, busy, label) {
-  const btn = document.getElementById(btnId);
-  const sp  = document.getElementById(spinnerId);
-  const tx  = document.getElementById(textId);
-  if (!btn) return;
-  btn.disabled = busy;
-  if (sp) sp.style.display = busy ? 'inline-block' : 'none';
-  if (tx) tx.textContent   = busy ? 'Please wait…' : label;
-  if (document.getElementById('googleBtn')) {
-    document.getElementById('googleBtn').disabled = busy;
-  }
-}
-
-// ── Tab switching ─────────────────────────────────────────────
-function switchTab(tab) {
-  ['signin','signup'].forEach(t => {
-    const panel = document.getElementById('panel' + (t === 'signin' ? 'SignIn' : 'SignUp'));
-    const btn   = document.getElementById('tab'   + (t === 'signin' ? 'SignIn' : 'SignUp'));
-    if (panel) panel.classList.toggle('active', t === tab);
-    if (btn)   btn.classList.toggle('active',   t === tab);
-  });
-  hideForgot();
-  clearErrors();
-}
-
-// ── Password toggle ───────────────────────────────────────────
-function togglePwd(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  const isText = input.type === 'text';
-  input.type   = isText ? 'password' : 'text';
-  btn.textContent = isText ? 'visibility' : 'visibility_off';
-}
-
-// ── Forgot panel ──────────────────────────────────────────────
-function showForgot(e) {
-  if (e) e.preventDefault();
-  document.getElementById('panelSignIn').style.display = 'none';
-  document.getElementById('tabBar').style.display      = 'none';
-  document.getElementById('forgotPanel').style.display = 'block';
-  clearErrors();
-}
-function hideForgot() {
-  const si = document.getElementById('panelSignIn');
-  const tb = document.getElementById('tabBar');
-  const fp = document.getElementById('forgotPanel');
-  if (si) si.style.display = '';
-  if (tb) tb.style.display = '';
-  if (fp) fp.style.display = 'none';
-  clearErrors();
-}
-
-// ── Redirect ──────────────────────────────────────────────────
-function redirectToApp() {
-  showLoading('Signing you in…');
-  window.location.replace(APP_URL);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  AUTH HANDLERS
-// ═══════════════════════════════════════════════════════════════
-
-// ── Google Sign In ────────────────────────────────────────────
-async function handleGoogleSignIn() {
-  clearErrors();
-
-  if (!fbAuth) {
-    showError('signinError', 'signinErrorMsg', 'Authentication service is not available. Please refresh the page.');
-    return;
-  }
-
-  diag('info', 'Google Sign-In requested');
-
-  const googleBtns = document.querySelectorAll('.google-btn');
-  googleBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
-
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-
-    diag('info', 'Opening Google sign-in popup…');
-    const cred = await fbAuth.signInWithPopup(provider);
-
-    if (cred.user) {
-      diag('info', 'Google sign-in successful: ' + cred.user.email);
-      redirectToApp();
-    }
-  } catch (e) {
-    diag('error', 'Google sign-in failed: ' + (e.code || e.message));
-    const msg = mapError(e.code, '');
-    if (msg) showError('signinError', 'signinErrorMsg', msg);
-  } finally {
-    googleBtns.forEach(b => { b.disabled = false; b.style.opacity = ''; });
-  }
-}
-
-// ── Email Sign In ─────────────────────────────────────────────
-async function handleEmailSignIn(e) {
-  e.preventDefault();
-  clearErrors();
-
-  if (!fbAuth) {
-    showError('signinError', 'signinErrorMsg', 'Authentication service not available. Please refresh.');
-    return;
-  }
-
-  const email    = document.getElementById('signinEmail').value.trim();
-  const password = document.getElementById('signinPassword').value;
-
-  if (!email)    { showError('signinError', 'signinErrorMsg', 'Please enter your email address.'); return; }
-  if (!password) { showError('signinError', 'signinErrorMsg', 'Please enter your password.');      return; }
-
-  diag('info', 'Email sign-in requested: ' + email);
-  setBusy('signinBtn', 'signinSpinner', 'signinBtnText', true, 'Sign In');
-
-  try {
-    await fbAuth.signInWithEmailAndPassword(email, password);
-    diag('info', 'Email sign-in successful');
-    redirectToApp();
-  } catch (e) {
-    diag('error', 'Email sign-in failed: ' + (e.code || e.message));
-    const msg = mapError(e.code);
-    if (msg) showError('signinError', 'signinErrorMsg', msg);
-  } finally {
-    setBusy('signinBtn', 'signinSpinner', 'signinBtnText', false, 'Sign In');
-  }
-}
-
-// ── Email Sign Up ─────────────────────────────────────────────
-async function handleSignUp(e) {
-  e.preventDefault();
-  clearErrors();
-
-  if (!fbAuth) {
-    showError('signupError', 'signupErrorMsg', 'Authentication service not available. Please refresh.');
-    return;
-  }
-
-  const name     = document.getElementById('signupName').value.trim();
-  const email    = document.getElementById('signupEmail').value.trim();
-  const password = document.getElementById('signupPassword').value;
-
-  if (!name)           { showError('signupError', 'signupErrorMsg', 'Please enter your full name.');     return; }
-  if (!email)          { showError('signupError', 'signupErrorMsg', 'Please enter your email address.'); return; }
-  if (!password)       { showError('signupError', 'signupErrorMsg', 'Please enter a password.');         return; }
-  if (password.length < 6) { showError('signupError', 'signupErrorMsg', 'Password must be at least 6 characters.'); return; }
-
-  diag('info', 'Sign-up requested: ' + email);
-  setBusy('signupBtn', 'signupSpinner', 'signupBtnText', true, 'Create Account');
-
-  try {
-    const cred = await fbAuth.createUserWithEmailAndPassword(email, password);
-
-    if (cred.user) {
-      // Set display name
-      try { await cred.user.updateProfile({ displayName: name }); } catch (_) {}
-      // Send verification email (non-blocking)
-      try { await cred.user.sendEmailVerification(); diag('info', 'Verification email sent'); } catch (_) {}
-    }
-
-    diag('info', 'Sign-up successful');
-    document.getElementById('signupSuccess').classList.add('show');
-    setTimeout(redirectToApp, 1500);
-
-  } catch (e) {
-    diag('error', 'Sign-up failed: ' + (e.code || e.message));
-    const msg = mapError(e.code);
-    if (msg) showError('signupError', 'signupErrorMsg', msg);
-  } finally {
-    setBusy('signupBtn', 'signupSpinner', 'signupBtnText', false, 'Create Account');
-  }
-}
-
-// ── Forgot Password ───────────────────────────────────────────
-async function handleForgot(e) {
-  e.preventDefault();
-  clearErrors();
-
-  if (!fbAuth) { return; }
-
-  const email = document.getElementById('forgotEmail').value.trim();
-  if (!email) { showError('forgotError', 'forgotErrorMsg', 'Please enter your email address.'); return; }
-
-  diag('info', 'Password reset requested: ' + email);
-  setBusy('forgotBtn', 'forgotSpinner', 'forgotBtnText', true, 'Send Reset Link');
-
-  try {
-    await fbAuth.sendPasswordResetEmail(email);
-    diag('info', 'Password reset email sent');
-    document.getElementById('forgotSuccess').classList.add('show');
-  } catch (e) {
-    diag('error', 'Password reset failed: ' + (e.code || e.message));
-    showError('forgotError', 'forgotErrorMsg', mapError(e.code));
-  } finally {
-    setBusy('forgotBtn', 'forgotSpinner', 'forgotBtnText', false, 'Send Reset Link');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  BOOT SEQUENCE
-// ═══════════════════════════════════════════════════════════════
-(function boot() {
-  diag('info', 'login.html boot sequence starting…');
-  diag('info', 'User-Agent: ' + navigator.userAgent.slice(0, 80));
-
-  const ok = initFirebase();
-  if (ok) {
-    checkSession();
+  if (svc.currentUser) {
+    window.location.replace(getRedirectUrl(svc.currentUser));
   } else {
-    diag('error', 'Firebase initialization failed — login form will work in degraded mode');
     hideLoading();
   }
 })();
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+  document.getElementById('configErrorBanner').style.display = 'none';
+}
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('panelSignIn').classList.toggle('active', tab === 'signin');
+  document.getElementById('panelSignUp').classList.toggle('active', tab === 'signup');
+  document.getElementById('tabSignIn').classList.toggle('active', tab === 'signin');
+  document.getElementById('tabSignUp').classList.toggle('active', tab === 'signup');
+  document.getElementById('forgotPanel').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'flex';
+  clearAlerts();
+}
+
+function showForgot(e) {
+  e.preventDefault();
+  document.getElementById('panelSignIn').classList.remove('active');
+  document.getElementById('tabBar').style.display = 'none';
+  document.getElementById('forgotPanel').style.display = 'block';
+  clearAlerts();
+}
+function hideForgot() {
+  document.getElementById('forgotPanel').style.display = 'none';
+  document.getElementById('tabBar').style.display = 'flex';
+  switchTab('signin');
+}
+
+// ── Password visibility ────────────────────────────────────────
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? 'visibility_off' : 'visibility';
+}
+
+// ── Alert helpers ──────────────────────────────────────────────
+function clearAlerts() {
+  ['signinError','signupError','signupSuccess','forgotError','forgotSuccess']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('show'); });
+}
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.querySelector('span:last-child').textContent = msg;
+  el.classList.add('show');
+}
+function showSuccess(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('show');
+}
+function setLoading(btnId, spinnerId, textId, label, loading) {
+  const btn     = document.getElementById(btnId);
+  const spinner = document.getElementById(spinnerId);
+  const text    = document.getElementById(textId);
+  if (btn)     btn.disabled = loading;
+  if (spinner) spinner.style.display = loading ? 'block' : 'none';
+  if (text)    text.textContent = loading ? '' : label;
+}
+
+
+// ── Sign In ────────────────────────────────────────────────────
+async function handleEmailSignIn(e) {
+  e.preventDefault();
+  clearAlerts();
+  const email    = document.getElementById('signinEmail').value.trim();
+  const password = document.getElementById('signinPassword').value;
+  if (!email || !password) { showError('signinError', 'Please enter your email and password.'); return; }
+  setLoading('signinBtn','signinSpinner','signinBtnText','Sign In', true);
+  try {
+    const user = await window.AuthService.login(email, password);
+    window.location.replace(getRedirectUrl(user));
+  } catch (err) {
+    showError('signinError', err.message || 'Sign in failed. Please try again.');
+  } finally {
+    setLoading('signinBtn','signinSpinner','signinBtnText','Sign In', false);
+  }
+}
+
+// ── Sign Up ────────────────────────────────────────────────────
+async function handleSignUp(e) {
+  e.preventDefault();
+  clearAlerts();
+  const name     = document.getElementById('signupName').value.trim();
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  if (!name || !email || !password) { showError('signupError', 'All fields are required.'); return; }
+  if (password.length < 8) { showError('signupError', 'Password must be at least 8 characters.'); return; }
+  setLoading('signupBtn','signupSpinner','signupBtnText','Create Account', true);
+  try {
+    await window.AuthService.register(email, password, name);
+    showSuccess('signupSuccess');
+    setTimeout(() => window.location.replace(HOME_URL), 1200);
+  } catch (err) {
+    showError('signupError', err.message || 'Registration failed. Please try again.');
+  } finally {
+    setLoading('signupBtn','signupSpinner','signupBtnText','Create Account', false);
+  }
+}
+
+// ── Forgot Password ────────────────────────────────────────────
+async function handleForgot(e) {
+  e.preventDefault();
+  clearAlerts();
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) { showError('forgotError', 'Please enter your email address.'); return; }
+  setLoading('forgotBtn','forgotSpinner','forgotBtnText','Send Reset Link', true);
+  try {
+    await window.AuthService.forgotPassword(email);
+    showSuccess('forgotSuccess');
+  } catch (err) {
+    showError('forgotError', err.message || 'Request failed. Please try again.');
+  } finally {
+    setLoading('forgotBtn','forgotSpinner','forgotBtnText','Send Reset Link', false);
+  }
+}
 </script>
-
-<!-- ═══════════════════════════════════════════════════════════
-     SETUP GUIDE MODAL (shown when Firebase providers not enabled)
-═══════════════════════════════════════════════════════════════ -->
-<div id="setupGuideModal" style="
-  display:none; position:fixed; inset:0; z-index:10001;
-  background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
-  padding:20px;">
-  <div style="
-    background:#fff; border-radius:20px; max-width:540px; width:100%;
-    padding:36px 32px; position:relative; box-shadow:0 24px 64px rgba(0,0,0,0.3);
-    max-height:90vh; overflow-y:auto;">
-
-    <!-- Close button -->
-    <button onclick="document.getElementById('setupGuideModal').style.display='none'"
-            style="position:absolute;top:16px;right:16px;background:none;border:none;
-                   cursor:pointer;font-size:22px;color:#737784;line-height:1;">✕</button>
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
-      <div style="width:48px;height:48px;border-radius:12px;background:#ffdad6;
-                  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">⚙️</div>
-      <div>
-        <h2 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:700;color:#191c1e;margin:0;">
-          Enable Firebase Sign-In
-        </h2>
-        <p style="font-size:13px;color:#434653;margin:4px 0 0;">
-          Google Sign-In is not enabled yet. Follow these steps to fix it.
-        </p>
-      </div>
-    </div>
-
-    <!-- Steps -->
-    <ol style="list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:16px;">
-
-      <li style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
-                    display:flex;align-items:center;justify-content:center;
-                    font-weight:700;font-size:13px;flex-shrink:0;">1</div>
-        <div>
-          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Open Firebase Console</div>
-          <a href="https://console.firebase.google.com/project/ai-trip-narrative-generator/authentication/providers"
-             target="_blank"
-             style="font-size:13px;color:#0f52ba;word-break:break-all;text-decoration:underline;">
-            console.firebase.google.com → ai-trip-narrative-generator → Authentication → Sign-in method
-          </a>
-        </div>
-      </li>
-
-      <li style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
-                    display:flex;align-items:center;justify-content:center;
-                    font-weight:700;font-size:13px;flex-shrink:0;">2</div>
-        <div>
-          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Enable Google Sign-In</div>
-          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
-            Click <strong>Google</strong> → Toggle to <strong>Enabled</strong> → Add your support email → Save.
-          </p>
-        </div>
-      </li>
-
-      <li style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
-                    display:flex;align-items:center;justify-content:center;
-                    font-weight:700;font-size:13px;flex-shrink:0;">3</div>
-        <div>
-          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Enable Email/Password</div>
-          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
-            Click <strong>Email/Password</strong> → Toggle to <strong>Enabled</strong> → Save.
-          </p>
-        </div>
-      </li>
-
-      <li style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#003c90;color:#fff;
-                    display:flex;align-items:center;justify-content:center;
-                    font-weight:700;font-size:13px;flex-shrink:0;">4</div>
-        <div>
-          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Add localhost as Authorized Domain</div>
-          <p style="font-size:13px;color:#434653;margin:0 0 6px;line-height:1.6;">
-            In <strong>Authentication → Settings → Authorized domains</strong>, click <strong>Add domain</strong> and add:
-          </p>
-          <code style="background:#f2f4f6;padding:6px 10px;border-radius:6px;font-size:13px;display:inline-block;font-family:monospace;">
-            localhost
-          </code>
-        </div>
-      </li>
-
-      <li style="display:flex;gap:14px;align-items:flex-start;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#22c55e;color:#fff;
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:16px;flex-shrink:0;">✓</div>
-        <div>
-          <div style="font-weight:600;font-size:14px;color:#191c1e;margin-bottom:4px;">Refresh this page</div>
-          <p style="font-size:13px;color:#434653;margin:0;line-height:1.6;">
-            Once providers are enabled, refresh this page and sign in.
-          </p>
-        </div>
-      </li>
-    </ol>
-
-    <!-- Screenshot hint -->
-    <div style="background:#f2f4f6;border-radius:12px;padding:14px 16px;margin-bottom:20px;">
-      <p style="font-size:12px;color:#434653;margin:0;line-height:1.6;">
-        💡 <strong>Tip:</strong> You need a Google account with access to the Firebase project
-        <strong>ai-trip-narrative-generator</strong>. The support email for Google Sign-In can be
-        any email you own.
-      </p>
-    </div>
-
-    <!-- Action buttons -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="https://console.firebase.google.com/project/ai-trip-narrative-generator/authentication/providers"
-         target="_blank"
-         style="flex:1;min-width:180px;text-align:center;padding:13px;background:#003c90;color:#fff;
-                border-radius:12px;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;
-                font-size:14px;font-weight:700;">
-        Open Firebase Console →
-      </a>
-      <button onclick="document.getElementById('setupGuideModal').style.display='none'; location.reload();"
-              style="flex:1;min-width:120px;padding:13px;background:#f2f4f6;color:#191c1e;
-                     border:none;border-radius:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;
-                     font-size:14px;font-weight:600;">
-        Done — Refresh
-      </button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>

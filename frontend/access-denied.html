@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Denied | Manivtha Tours</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Work+Sans:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary': '#003c90',
+            'secondary': '#ac3509',
+            'error': '#ba1a1a',
+            'background': '#f7f9fb',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Firebase compat for Sign Out button functionality -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="/js/config.js"></script>
+
+  <style>
+    body {
+      font-family: 'Work Sans', sans-serif;
+    }
+    .display-font {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-white rounded-3xl p-8 border border-[#c3c6d5] shadow-2xl text-center transform transition-all duration-300 hover:scale-[1.01]">
+    <!-- Icon with glow -->
+    <div class="mx-auto w-24 h-24 rounded-full bg-red-50 flex items-center justify-center text-error mb-6 shadow-inner relative animate-pulse">
+      <span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">gpp_bad</span>
+      <div class="absolute inset-0 rounded-full border-2 border-error opacity-20 animate-ping"></div>
+    </div>
+    
+    <h1 class="display-font text-3xl font-extrabold text-gray-900 mb-2">Access Denied</h1>
+    <h2 class="display-font text-lg font-bold text-gray-500 mb-6">Insufficient Permissions</h2>
+    
+    <p class="text-gray-600 mb-8 leading-relaxed">
+      Your account does not have administrative access. The Admin Dashboard is restricted to authorized administrators with the Admin role.
+    </p>
+    
+    <div class="space-y-3">
+      <a href="/index.html" class="block w-full bg-primary text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-200 active:scale-95">
+        Go to User Dashboard
+      </a>
+      
+      <button onclick="handleSignOut()" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 px-4 rounded-xl font-semibold transition-all duration-200 active:scale-95">
+        Sign Out
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function handleSignOut() {
+      if (typeof firebase !== 'undefined') {
+        firebase.auth().signOut().then(() => {
+          localStorage.removeItem('mock_user'); // clear mock auth if any
+          window.location.href = '/login.html';
+        }).catch((err) => {
+          console.error('Sign out failed:', err);
+          window.location.href = '/login.html';
+        });
+      } else {
+        localStorage.removeItem('mock_user');
+        window.location.href = '/login.html';
+      }
+    }
+  </script>
+</body>
+</html>

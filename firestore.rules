@@ -3,30 +3,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions for Role-Based Access Control (RBAC)
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return request.auth != null && getRole() == 'Admin';
+    }
+
+    // ── Admin Allowlist ───────────────────────────────────────
+    match /admins/{email} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // ── Narratives ────────────────────────────────────────────
-    // Users can only read/write their OWN narratives (userId field matches).
-    // Anyone authenticated can create (needed at creation time before userId is set on resource).
     match /narratives/{narrativeId} {
-      // Create: must be authenticated and must set userId to own UID
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
 
-      // Read, update, delete: only the owner
       allow read, update, delete: if request.auth != null
-                                   && resource.data.userId == request.auth.uid;
+                                   && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // ── Users (profile documents) ─────────────────────────────
-    // Each user can only read/write their own profile document.
     match /users/{userId} {
       allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+                         && (request.auth.uid == userId || isAdmin());
     }
 
     // ── Feedback (denormalised ratings) ───────────────────────
     match /feedback/{feedbackId} {
       allow read, write: if request.auth != null
-                         && resource.data.userId == request.auth.uid;
+                         && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if request.auth != null;
     }
 

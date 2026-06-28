@@ -4,7 +4,7 @@ const db = require('../db/database');
 
 /**
  * POST /api/feedback/link-firestore
- * Links a Firestore document ID back to the MongoDB narrative record.
+ * Links a Firestore document ID back to the Turso narrative record.
  * Called non-blocking from the frontend after Firestore save succeeds.
  */
 router.post('/link-firestore', async (req, res) => {
